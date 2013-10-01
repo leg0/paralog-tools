@@ -1,0 +1,128 @@
+﻿<html>
+<head>
+    <title>YOUR NAME's skydiving logbook</title>
+    <script language="javascript" type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script language="javascript" type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/knockout/2.3.0/knockout-min.js"></script>
+    <script language="javascript" type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.0.0/js/bootstrap.min.js"></script>
+    <script language="javascript" type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/sammy.js/0.7.4/sammy.min.js"></script>
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.0.0/css/bootstrap-theme.min.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.0.0/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="logbook2.css" />
+
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+
+    <style>
+        .bar { 
+            display: block;
+            height: 5px;
+            width: 1px;
+            background-color: #aaf;
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar navbar-inverse navbar-fixed-top" >
+      <div class="container">
+        <div class="navbar-header">
+          <a data-bind="text: $root.title" class="navbar-brand" href="#"></a>
+        </div>
+        <div class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li data-bind="css: { active: activeTab()=='jumps'   }"><a href="#/jumps">Jumps</a></li>
+            <li data-bind="css: { active: activeTab()=='stats'   }"><a href="#/stats">Statistics</a></li>
+            <li data-bind="css: { active: activeTab()=='upload'  }"><a href="#/upload">Upload .pmz file</a></li>
+            <!-- <li data-bind="css: { active: activeTab()=='log'     }"><a href="#/log">Log a jump</a></li> -->
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </div>
+
+    <!-- Jumps tab -->
+
+    <div class="container" data-bind="with: jumpsTab">
+        <div class="row">
+            <div class="logbook2 col-lg-3">
+                <h1>Years in sport</h1>
+                <!-- ko foreach: years -->
+                <a href="#" data-bind="text: num, click: function() { navigateTo() }"></a>: <span data-bind="text: count"></span> jumps<br/>
+                    <div class="bar" data-bind="style: { width : count() + 'px'}"></div>
+                <!-- /ko -->
+            </div>
+
+            <div class="logbook2 col-lg-4" data-bind="with: selectedYear">
+                <h1>Jumps made in <span data-bind="text: num"></span></h1>
+                <!-- ko foreach: months -->
+                    <a
+                        href="#"  
+                        data-bind="
+                            text: name,
+                            attr: { href: '#/jumps/date/' + $data.year + '/' + $data.num }
+                            "></a>: <span data-bind="text: count"></span> jumps
+                    <div class="bar" data-bind="style: {width: (count*2) + 'px'}"></div>
+                    <script>
+                        function range(lo, hi)
+                        {
+                            var res = []
+                            for (var i = lo; i <= hi; ++i)
+                            {
+                                res.push(i)
+                            }
+                            return res
+                        }
+                    </script>
+                    <div data-bind="visible: $root.jumpsTab().selectedMonth() === $data">
+                        <!-- ko foreach: range(min, max) -->
+                            <a
+                                data-bind="
+                                    text: $data,
+                                    attr: { href: '#/jumps/date/' + $parent.year + '/' + $parent.num + '/jump/' + $data }"></a>
+                        <!-- /ko -->
+                        <hr/>
+                    </div>
+                <!-- /ko -->
+            </div>
+
+            
+            <div class="logbook2 col-lg-4" data-bind="with: selectedJump">
+                <h1>Jump <span data-bind="text: num"></span> details</h1>
+                <!-- ko if: isLoaded -->
+                    <span class="label">Place:</span> <span class="value" data-bind="text: dropzone"></span>
+                <!-- /ko -->
+                <!-- ko is: !isLoaded -->
+                    <img src="img/busy.gif" alt="data is not loaded" />
+                <!-- /ko -->
+            </div>
+        </div>
+
+        <hr/>
+    </div>
+
+    <!-- Statistics tab -->
+
+    <div class="container" data-bind="with: statsTab">
+        <div class="row">
+            <div class="logbook2 col-lg-5">
+                <h1>Statistics</h1>
+                <!-- Jumped <span data-bind="text: logbook().count"></span> times.<br/> -->
+                Made <a href="#" data-bind="text: 444"></a> jumps in last 12 months.<br/>
+                Made <a href="#" data-bind="text: 30"></a> jumps in last 3 months.<br/>
+                Jumped at <a href="#" data-bind="text: 22"></a> different dropzones.<br/>
+                Jumped from <a href="#" data-bind="text: 18"></a> different aircraft.<br/>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload tab -->
+
+    <div class="container" data-bind="with: uploadTab">
+        <h1>Upload a paralog database</h1>
+        
+    </div>
+
+    <script language="javascript" type="text/javascript" src="model.js"></script>
+</body>
+</html>
+
