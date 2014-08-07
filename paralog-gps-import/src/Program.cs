@@ -6,17 +6,34 @@ using System.Xml;
 using System.IO;
 using System.IO.Compression;
 using System.Globalization;
+using CommandLine;
+using CommandLine.Text;
 
 namespace Paralog_gps
 {
+    class Options
+    {
+        [Option('d', "database", Required = true, HelpText = "Paralog database")]
+        public string Database { get; set; }
+
+        [Option('t', "type", Required = false, DefaultValue = "flysight", HelpText = "Type of GPS log")]
+        public string Type { get; set; }
+
+        [Option('i', "input-file", Required = true, HelpText = "Name of GPS log file")]
+        public string InputFile { get; set; }
+
+        [Option('j', "jump-number", Required = true, HelpText = "Number of jump to modify")]
+        public int JumpNumber { get; set; }
+
+        [HelpOption]
+        public string GetUsage()
+        {
+            return HelpText.AutoBuild(this, (HelpText c) => HelpText.DefaultParsingErrorsHandler(this, c));
+        }
+    }
+    
     class Program
     {
-        private static void Usage()
-        {
-            Console.WriteLine("Usage:\n\tparalog-gps <paralog-file> <nmea-file> <jump-number>");
-            Console.WriteLine("\n\nFor example:\n\tparalog-gps logbook.pmz jump-771.txt 771\n");
-        }
-
         private static XmlDocument LoadFile(String filename)
         {
             FileStream fs = new FileStream(filename, FileMode.Open);
@@ -40,7 +57,7 @@ namespace Paralog_gps
             fs.Close();
         }
 
-        private static XmlNode FindJump(XmlDocument doc, String jumpNumber)
+        private static XmlNode FindJump(XmlDocument doc, int jumpNumber)
         {
             String query = String.Format("/pml/log/jump/@n={0}", jumpNumber);
             XmlNodeList jumps = doc.SelectNodes("/pml/log/jump");
@@ -63,17 +80,17 @@ namespace Paralog_gps
 
         static void Main(String[] args)
         {
-            if (args.Length != 3)
+            var opt = new Options();
+            if (!CommandLine.Parser.Default.ParseArguments(args, opt))
             {
-                Usage();
                 return;
             }
 
-            String xmlfile = args[0];
-            String nmeafile = args[1];
-            String jumpNumber = args[2];
+            var xmlfile = opt.Database;
+            var nmeafile = opt.InputFile;
+            var jumpNumber = opt.JumpNumber;
 
-            CultureInfo ci = new CultureInfo("en-US");
+            var ci = new CultureInfo("en-US");
 
             XmlDocument doc = null;
             try
@@ -94,6 +111,7 @@ namespace Paralog_gps
                 {
                     Console.WriteLine("not found");
                     //Console.WriteLine("Jump {0} not found in file {1}.", jumpNumber, xmlfile);
+                    
                     return;
                 }
                 else
