@@ -8,6 +8,7 @@ using System.IO.Compression;
 using System.Globalization;
 using CommandLine;
 using CommandLine.Text;
+using Nortal.Utilities.Csv;
 
 namespace Paralog_gps
 {
@@ -59,19 +60,9 @@ namespace Paralog_gps
 
         private static XmlNode FindJump(XmlDocument doc, int jumpNumber)
         {
-            String query = String.Format("/pml/log/jump/@n={0}", jumpNumber);
-            XmlNodeList jumps = doc.SelectNodes("/pml/log/jump");
-            XmlNode jump = null;
-            foreach (XmlNode j in jumps)
-            {
-                XmlAttribute attr = j.Attributes["n"];
-                if (attr != null && attr.Value.Equals(jumpNumber))
-                {
-                    return j;
-                }
-            }
-
-            return null;
+            var query = String.Format("/pml/log/jump[@n={0}]", jumpNumber);
+            var jumps = doc.SelectNodes(query);
+            return (jumps.Count == 0) ? null : jumps[0];
         }
 
         private static void CreateProfile()
@@ -87,10 +78,8 @@ namespace Paralog_gps
             }
 
             var xmlfile = opt.Database;
-            var nmeafile = opt.InputFile;
+            var inputFile = opt.InputFile;
             var jumpNumber = opt.JumpNumber;
-
-            var ci = new CultureInfo("en-US");
 
             XmlDocument doc = null;
             try
@@ -111,7 +100,6 @@ namespace Paralog_gps
                 {
                     Console.WriteLine("not found");
                     //Console.WriteLine("Jump {0} not found in file {1}.", jumpNumber, xmlfile);
-                    
                     return;
                 }
                 else
@@ -119,72 +107,19 @@ namespace Paralog_gps
                     Console.WriteLine("found");
                 }
 
-                // create profile from NMEA file.
-                Console.WriteLine("Creating profile ...");
-                XmlElement profile = doc.CreateElement("profile");
-                XmlAttribute type = doc.CreateAttribute("type");
-                type.Value = "gps";
-                profile.Attributes.Append(type);
-
-                XmlElement qne = doc.CreateElement("qne");
-                qne.InnerText = "0.0";
-                profile.AppendChild(qne);
-
-                XmlElement waypoints = doc.CreateElement("waypoints");
-
-                Nmea.Time firstTime = null;
-                StreamReader nmeaReader = new StreamReader(nmeafile);
-
-                int waypointsSize = 0;
-
-                while (!nmeaReader.EndOfStream)
+                if (opt.Type == "nmea")
                 {
-                    String line = nmeaReader.ReadLine();
-                    if (!line.StartsWith(Nmea.GpsFixData.PREFIX))
-                        continue;
-
-                    Nmea.GpsFixData gpgga = new Nmea.GpsFixData(line);
-                    if (gpgga.FixQuality.Equals("0"))
-                        // no fix
-                        continue;
-
-                    if (firstTime == null)
-                        firstTime = gpgga.Time;
-
-                    // altitude
-                    XmlAttribute a = doc.CreateAttribute("a");
-                    a.Value = gpgga.Altitude.Value.ToString(ci);
-                    // time
-                    XmlAttribute t = doc.CreateAttribute("t");
-                    int ms = (int)((gpgga.Time - firstTime) * 1000.0);
-                    t.Value = (((double)ms) / 1000.0).ToString(ci);
-
-                    // latitude
-                    XmlElement lat = doc.CreateElement("lat");
-                    lat.InnerText = (gpgga.Latitude.Degrees).ToString(ci);
-
-                    // longitude
-                    XmlElement lon = doc.CreateElement("lon");
-                    lon.InnerText = (gpgga.Longitude.Degrees).ToString(ci);
-
-                    XmlElement wpt = doc.CreateElement("wpt");
-                    wpt.AppendChild(lat);
-                    wpt.AppendChild(lon);
-                    wpt.Attributes.Append(a);
-                    wpt.Attributes.Append(t);
-
-                    waypoints.AppendChild(wpt);
-                    ++waypointsSize;
+                    createProfileFromNmea(inputFile, doc, jump);
                 }
-
-                Console.WriteLine("Added {0} waypoints.", waypointsSize);
-
-                XmlAttribute waypointsSizeAttr = doc.CreateAttribute("size");
-                waypointsSizeAttr.Value = waypointsSize.ToString();
-                waypoints.Attributes.Append(waypointsSizeAttr);
-
-                profile.AppendChild(waypoints);
-                jump.AppendChild(profile);
+                else if (opt.Type == "flysight")
+                {
+                    createProfileFromFlysight(inputFile, doc, jump);
+                }
+                else
+                {
+                    Console.WriteLine("Invalid input file type: {0}", opt.Type);
+                    return;
+                }
 
                 // save file
                 SaveFile(xmlfile, doc);
@@ -199,6 +134,153 @@ namespace Paralog_gps
                 Console.WriteLine("Error: {0}.", ex.Message);
                 return;
             }
+        }
+
+        private static void createProfileFromNmea(string nmeafile, XmlDocument doc, XmlNode jump)
+        {
+            var ci = new CultureInfo("en-US");
+
+            // create profile from NMEA file.
+            Console.WriteLine("Creating profile ...");
+            var profile = doc.CreateElement("profile");
+            var type = doc.CreateAttribute("type");
+            type.Value = "gps";
+            profile.Attributes.Append(type);
+
+            var qne = doc.CreateElement("qne");
+            qne.InnerText = "0.0";
+            profile.AppendChild(qne);
+
+            var waypoints = doc.CreateElement("waypoints");
+
+            Nmea.Time firstTime = null;
+            var nmeaReader = new StreamReader(nmeafile);
+
+            int waypointsSize = 0;
+
+            while (!nmeaReader.EndOfStream)
+            {
+                String line = nmeaReader.ReadLine();
+                if (!line.StartsWith(Nmea.GpsFixData.PREFIX))
+                    continue;
+
+                Nmea.GpsFixData gpgga = new Nmea.GpsFixData(line);
+                if (gpgga.FixQuality.Equals("0"))
+                    // no fix
+                    continue;
+
+                if (firstTime == null)
+                    firstTime = gpgga.Time;
+
+                // altitude
+                var a = doc.CreateAttribute("a");
+                a.Value = gpgga.Altitude.Value.ToString(ci);
+                // time
+                var t = doc.CreateAttribute("t");
+                int ms = (int)((gpgga.Time - firstTime) * 1000.0);
+                t.Value = (((double)ms) / 1000.0).ToString(ci);
+
+                // latitude
+                var lat = doc.CreateElement("lat");
+                lat.InnerText = (gpgga.Latitude.Degrees).ToString(ci);
+
+                // longitude
+                var lon = doc.CreateElement("lon");
+                lon.InnerText = (gpgga.Longitude.Degrees).ToString(ci);
+
+                var wpt = doc.CreateElement("wpt");
+                wpt.AppendChild(lat);
+                wpt.AppendChild(lon);
+                wpt.Attributes.Append(a);
+                wpt.Attributes.Append(t);
+
+                waypoints.AppendChild(wpt);
+                ++waypointsSize;
+            }
+
+            Console.WriteLine("Added {0} waypoints.", waypointsSize);
+
+            var waypointsSizeAttr = doc.CreateAttribute("size");
+            waypointsSizeAttr.Value = waypointsSize.ToString();
+            waypoints.Attributes.Append(waypointsSizeAttr);
+
+            profile.AppendChild(waypoints);
+            jump.AppendChild(profile);
+        }
+
+        private static void createProfileFromFlysight(string flysightfile, XmlDocument doc, XmlNode jump)
+        {
+            var ci = new CultureInfo("en-US");
+
+            // create profile from Flysight file.
+            Console.WriteLine("Creating profile ...");
+            var profile = doc.CreateElement("profile");
+            var type = doc.CreateAttribute("type");
+            type.Value = "gps";
+            profile.Attributes.Append(type);
+
+            var qne = doc.CreateElement("qne");
+            qne.InnerText = "0.0";
+            profile.AppendChild(qne);
+
+            var waypoints = doc.CreateElement("waypoints");
+
+            var flysightReader = new StreamReader(flysightfile);
+            var waypointsSize = 0;
+            var csvSettings = new CsvSettings();
+            csvSettings.FieldDelimiter = ',';
+            csvSettings.RowDelimiter = "\r\n";
+            var p = new CsvParser(flysightReader, csvSettings);
+            DateTime firstTime = DateTime.Now;
+            int lineNumber = 0;
+            while (p.HasMoreRows)
+            {
+                var line = p.ReadNextRow();
+                if (line == null)
+                    break;
+
+                // The first two lines are headers.
+                ++lineNumber;
+                if (lineNumber < 3)
+                    continue;
+                else if (lineNumber == 3)
+                    firstTime = DateTime.Parse(line[0]);
+
+                // altitude
+                var a = doc.CreateAttribute("a");
+                a.Value = line[3].ToString(ci);
+                // time
+                var t = doc.CreateAttribute("t");
+                DateTime dt = DateTime.Parse(line[0]);
+                var diff = dt.Subtract(firstTime);
+                t.Value = (((double)diff.TotalMilliseconds) / 1000.0).ToString(ci);
+
+                // latitude
+                var lat = doc.CreateElement("lat");
+                lat.InnerText = line[1];
+
+                // longitude
+                var lon = doc.CreateElement("lon");
+                lon.InnerText = line[2];
+
+                var wpt = doc.CreateElement("wpt");
+                wpt.AppendChild(lat);
+                wpt.AppendChild(lon);
+                wpt.Attributes.Append(a);
+                wpt.Attributes.Append(t);
+
+                waypoints.AppendChild(wpt);
+                ++waypointsSize;
+            }
+
+            Console.WriteLine("Added {0} waypoints.", waypointsSize);
+
+            var waypointsSizeAttr = doc.CreateAttribute("size");
+            waypointsSizeAttr.Value = waypointsSize.ToString();
+            waypoints.Attributes.Append(waypointsSizeAttr);
+
+            profile.AppendChild(waypoints);
+            jump.AppendChild(profile);
         }
     }
 }
