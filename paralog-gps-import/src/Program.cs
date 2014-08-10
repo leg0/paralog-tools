@@ -138,77 +138,21 @@ namespace Paralog_gps
 
         private static void createProfileFromNmea(string nmeafile, XmlDocument doc, XmlNode jump)
         {
-            var ci = new CultureInfo("en-US");
-
-            // create profile from NMEA file.
-            Console.WriteLine("Creating profile ...");
-            var profile = doc.CreateElement("profile");
-            var type = doc.CreateAttribute("type");
-            type.Value = "gps";
-            profile.Attributes.Append(type);
-
-            var qne = doc.CreateElement("qne");
-            qne.InnerText = "0.0";
-            profile.AppendChild(qne);
-
-            var waypoints = doc.CreateElement("waypoints");
-
-            Nmea.Time firstTime = null;
-            var nmeaReader = new StreamReader(nmeafile);
-
-            int waypointsSize = 0;
-
-            while (!nmeaReader.EndOfStream)
-            {
-                String line = nmeaReader.ReadLine();
-                if (!line.StartsWith(Nmea.GpsFixData.PREFIX))
-                    continue;
-
-                Nmea.GpsFixData gpgga = new Nmea.GpsFixData(line);
-                if (gpgga.FixQuality.Equals("0"))
-                    // no fix
-                    continue;
-
-                if (firstTime == null)
-                    firstTime = gpgga.Time;
-
-                // altitude
-                var a = doc.CreateAttribute("a");
-                a.Value = gpgga.Altitude.Value.ToString(ci);
-                // time
-                var t = doc.CreateAttribute("t");
-                int ms = (int)((gpgga.Time - firstTime) * 1000.0);
-                t.Value = (((double)ms) / 1000.0).ToString(ci);
-
-                // latitude
-                var lat = doc.CreateElement("lat");
-                lat.InnerText = (gpgga.Latitude.Degrees).ToString(ci);
-
-                // longitude
-                var lon = doc.CreateElement("lon");
-                lon.InnerText = (gpgga.Longitude.Degrees).ToString(ci);
-
-                var wpt = doc.CreateElement("wpt");
-                wpt.AppendChild(lat);
-                wpt.AppendChild(lon);
-                wpt.Attributes.Append(a);
-                wpt.Attributes.Append(t);
-
-                waypoints.AppendChild(wpt);
-                ++waypointsSize;
-            }
-
-            Console.WriteLine("Added {0} waypoints.", waypointsSize);
-
-            var waypointsSizeAttr = doc.CreateAttribute("size");
-            waypointsSizeAttr.Value = waypointsSize.ToString();
-            waypoints.Attributes.Append(waypointsSizeAttr);
-
-            profile.AppendChild(waypoints);
-            jump.AppendChild(profile);
+            createProfileFromData(new NmeaFileParser(nmeafile), doc, jump);
         }
 
-        private static void createProfileFromFlysight(string flysightfile, XmlDocument doc, XmlNode jump)
+        private static void createProfileFromFlysight(string flysightFile, XmlDocument doc, XmlNode jump)
+        {
+            createProfileFromData(new FlysightParser(flysightFile), doc, jump);
+        }
+
+        /// <summary>
+        /// Create progile
+        /// </summary>
+        /// <param name="wpts"></param>
+        /// <param name="doc"></param>
+        /// <param name="jump"></param>
+        private static void createProfileFromData(IEnumerable<Waypoint> wpts, XmlDocument doc, XmlNode jump)
         {
             var ci = new CultureInfo("en-US");
 
@@ -224,44 +168,24 @@ namespace Paralog_gps
             profile.AppendChild(qne);
 
             var waypoints = doc.CreateElement("waypoints");
-
-            var flysightReader = new StreamReader(flysightfile);
             var waypointsSize = 0;
-            var csvSettings = new CsvSettings();
-            csvSettings.FieldDelimiter = ',';
-            csvSettings.RowDelimiter = "\r\n";
-            var p = new CsvParser(flysightReader, csvSettings);
-            DateTime firstTime = DateTime.Now;
-            int lineNumber = 0;
-            while (p.HasMoreRows)
+            foreach (var wp in wpts)
             {
-                var line = p.ReadNextRow();
-                if (line == null)
-                    break;
-
-                // The first two lines are headers.
-                ++lineNumber;
-                if (lineNumber < 3)
-                    continue;
-                else if (lineNumber == 3)
-                    firstTime = DateTime.Parse(line[0]);
-
                 // altitude
                 var a = doc.CreateAttribute("a");
-                a.Value = line[3].ToString(ci);
+                a.Value = wp.altitude;
+
                 // time
                 var t = doc.CreateAttribute("t");
-                DateTime dt = DateTime.Parse(line[0]);
-                var diff = dt.Subtract(firstTime);
-                t.Value = (((double)diff.TotalMilliseconds) / 1000.0).ToString(ci);
+                t.Value = wp.time;
 
                 // latitude
                 var lat = doc.CreateElement("lat");
-                lat.InnerText = line[1];
+                lat.InnerText = wp.latitude;
 
                 // longitude
                 var lon = doc.CreateElement("lon");
-                lon.InnerText = line[2];
+                lon.InnerText = wp.longitude;
 
                 var wpt = doc.CreateElement("wpt");
                 wpt.AppendChild(lat);
