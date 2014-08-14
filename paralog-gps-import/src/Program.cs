@@ -26,6 +26,15 @@ namespace Paralog_gps
         [Option('j', "jump-number", Required = true, HelpText = "Number of jump to modify")]
         public int JumpNumber { get; set; }
 
+        [Option('c', "create", Required = false, DefaultValue = false, HelpText = "Create a record for jump if it doesn't exist.")]
+        public bool ShouldCreateJump { get; set; }
+
+        [Option("dropzone", Required = false, HelpText = "Dropzone. Used when new jump is created, otherwise ignored.")]
+        public string DropZone { get; set; }
+
+        [Option("aircraft", Required = false, HelpText = "Aircraft name. Used when new jump is created, otherwise ignored.")]
+        public string Aircraft { get; set; }
+
         [HelpOption]
         public string GetUsage()
         {
@@ -65,6 +74,37 @@ namespace Paralog_gps
             return (jumps.Count == 0) ? null : jumps[0];
         }
 
+        private static XmlNode CreateJump(XmlDocument doc, int jumpNumber, string dropZone, string aircraft)
+        {
+            var jump = doc.CreateElement("jump");
+            var n = doc.CreateAttribute("n");
+            n.Value = jumpNumber.ToString();
+            jump.Attributes.Append(n);
+
+            var note = doc.CreateElement("note");
+            note.InnerText = "Imported by paralog-gps.";
+            jump.AppendChild(note);
+
+            if (dropZone.Length > 0)
+            {
+                var dz = doc.CreateElement("dz");
+                dz.InnerText = dropZone;
+                jump.AppendChild(dz);
+            }
+
+            if (aircraft.Length > 0)
+            {
+                var ac = doc.CreateElement("ac");
+                ac.InnerText = aircraft;
+                jump.AppendChild(ac);
+            }
+            // TODO: attr.ts = take date and time from GPS data.
+            // TODO: attr.mod = ts
+            // TODO: determine dz by GPS coordinates (if unable, require command line argument).
+
+            return jump;
+        }
+
         private static void CreateProfile()
         {
         }
@@ -99,8 +139,23 @@ namespace Paralog_gps
                 if (jump == null)
                 {
                     Console.WriteLine("not found");
-                    //Console.WriteLine("Jump {0} not found in file {1}.", jumpNumber, xmlfile);
-                    return;
+                    if (opt.ShouldCreateJump)
+                    {
+                        Console.Write("Creating record for jump {0} ...", jumpNumber);
+                        jump = CreateJump(doc, jumpNumber, opt.DropZone, opt.Aircraft);
+
+                        var log = doc.GetElementsByTagName("log");
+                        log[0].AppendChild(jump);
+
+                        var sz = log[0].Attributes["size"].Value;
+                        log[0].Attributes["size"].Value = (int.Parse(sz) + 1).ToString();
+
+                        Console.WriteLine("done");
+                    }
+                    else
+                    {
+                        return;
+                    }
                 }
                 else
                 {
@@ -169,6 +224,16 @@ namespace Paralog_gps
 
             var waypoints = doc.CreateElement("waypoints");
             var waypointsSize = 0;
+
+            // if jump does not have ts attribute, take it from the first waypoint.
+            var wp1 = wpts.First();
+            if (jump.Attributes["ts"] == null && wp1 != null && wp1.timestamp != null)
+            {
+                var ts = doc.CreateAttribute("ts");
+                ts.Value = wp1.timestamp;
+                jump.Attributes.Append(ts);
+            }
+
             foreach (var wp in wpts)
             {
                 // altitude

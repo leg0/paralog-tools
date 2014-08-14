@@ -43,7 +43,8 @@ namespace Paralog_gps
                     altitude = line[3],
                     latitude = line[1],
                     longitude = line[2],
-                    time = (((double)diff.TotalMilliseconds) / 1000.0).ToString(ci)
+                    time = (((double)diff.TotalMilliseconds) / 1000.0).ToString(ci),
+                    timestamp = line[0]
                 };
             }
         }
