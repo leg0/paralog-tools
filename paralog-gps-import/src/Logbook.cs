@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.IO.Compression;
 using System.Xml;
 
@@ -7,12 +6,12 @@ namespace Paralog_gps
 {
     public class Logbook
     {
-        public static Logbook LoadFromFile(String file)
+        public static Logbook LoadFromFile(string file)
         {
             return new Logbook(file);
         }
 
-        private Logbook(String filename)
+        private Logbook(string filename)
         {
             FileStream fs = new FileStream(filename, FileMode.Open);
             GZipStream gs = new GZipStream(fs, CompressionMode.Decompress);
@@ -26,7 +25,7 @@ namespace Paralog_gps
             doc_ = doc;
         }
 
-        public void SaveFile(String filename)
+        public void SaveFile(string filename)
         {
             FileStream fs = new FileStream(filename, FileMode.Truncate);
             GZipStream gs = new GZipStream(fs, CompressionMode.Compress, false);
@@ -37,7 +36,7 @@ namespace Paralog_gps
 
         public JumpData FindJump(int jumpNumber)
         {
-            var query = String.Format("/pml/log/jump[@n={0}]", jumpNumber);
+            var query = string.Format("/pml/log/jump[@n={0}]", jumpNumber);
             var jumps = doc_.SelectNodes(query);
             return (jumps.Count == 0) ? null : new JumpData(jumps[0]);
         }

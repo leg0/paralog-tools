@@ -37,7 +37,7 @@ namespace Paralog_gps
 
     class Program
     {
-        static void Main(String[] args)
+        static void Main(string[] args)
         {
             var opt = new Options();
             if (!CommandLine.Parser.Default.ParseArguments(args, opt))

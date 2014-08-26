@@ -17,7 +17,7 @@ namespace Paralog_gps
         public string Dropzone { get; set; }
         // ...
 
-        public bool CreateProfileFromFile(String inputFile, String type)
+        public bool CreateProfileFromFile(string inputFile, string type)
         {
             if (type == "nmea")
             {
