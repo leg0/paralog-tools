@@ -100,7 +100,7 @@ class DropzoneModel
 class JumpModel
 {
     isLoaded: KnockoutObservable<boolean> = ko.observable(false);
-    num: KnockoutObservable<number> = ko.observable(1234);
+    num: KnockoutObservable<number> = ko.observable(0);
     aircraft: KnockoutObservable<AircraftModel> = ko.observable(null);
     dropzone: KnockoutObservable<string> = ko.observable(null);
     exit: KnockoutObservable<number> = ko.observable(null);
@@ -112,16 +112,29 @@ class JumpModel
 
     jump: any = null;
 
-    // TODO: asynchronous loading of data
     constructor(num: number)
     {
-        this.num(num);
-        this.asyncLoad();
+        this.num(num)
+        this.asyncLoad(num)
     }
 
-    asyncLoad()
+    asyncLoad(n: number)
     {
-        // TODO: get jump details from server. on success set isLoaded to true.
+        // get jump details from server. on success set isLoaded to true.
+        $.getJSON("./x/jump?n=" + n, (j) => {
+            console.log("Got jump", n, "details:", j)
+            if (j)
+            {
+                this.aircraft(j.aircraft)
+                this.dropzone(j.dropzone)
+                this.exit(j.exit)
+                this.open(j.open)
+                this.delay(j.delay)
+                this.type(j.type)
+                this.isLoaded(true)
+                // TODO: profile and other interesting stuff.
+            }
+        })
     }
 }
 

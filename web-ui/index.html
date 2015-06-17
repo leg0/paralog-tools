@@ -88,9 +88,14 @@
             <div class="logbook2 col-lg-4" data-bind="with: selectedJump">
                 <h1>Jump <span data-bind="text: num"></span> details</h1>
                 <!-- ko if: isLoaded -->
-                    <span class="label">Place:</span> <span class="value" data-bind="text: dropzone"></span>
+                    <span class="label">Place:</span> <span class="value" data-bind="text: dropzone"></span><br />
+                    <span class="label">Aircraft:</span> <span class="value" data-bind="text: aircraft"></span><br />
+                    <span class="label">Exit:</span> <span class="value" data-bind="text: exit"> m</span><br />
+                    <span class="label">Open:</span> <span class="value" data-bind="text: open"> m</span><br />
+                    <span class="label">Type:</span> <span class="value" data-bind="text: type"></span>
+
                 <!-- /ko -->
-                <!-- ko is: !isLoaded -->
+                <!-- ko ifnot: isLoaded -->
                     <img src="img/busy.gif" alt="data is not loaded" />
                 <!-- /ko -->
             </div>

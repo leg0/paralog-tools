@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 )
 
 const DATABASE_FILE = "sqlite.db"
@@ -107,6 +108,31 @@ func getBasicStats()([]byte, error) {
 	return json.Marshal(Stats{stats})
 }
 
+func getJumpDetails(jumpNumber int)([]byte, error) {
+	type JumpDetails struct {
+		Num int `json:"num"`
+		Aircraft string `json:"aircraft"`
+		Dropzone string `json:"dropzone"`
+		Exit int `json:"exit"`
+		Open int `json:"open"`
+		//Delay int `json:"delay"`
+		Type string `json:"type"`
+	}
+
+	sql := "select j.n, ac.type, dz.name, j.exit, j.open, j.type " +
+		"from (select * from jump where n=@n) j" +
+			" left outer join aircraft ac on j.ac_id = ac.rowid" +
+			" left outer join dropzone dz on j.dz_id = dz.rowid"
+
+	if stmt, err := sqliteConn.Query(sql, jumpNumber); err == nil {
+		j := JumpDetails {}
+		stmt.Scan(&j.Num, &j.Aircraft, &j.Dropzone, &j.Exit, &j.Open, &j.Type)
+		return json.Marshal(j)
+	} else {
+		return nil, err
+	}
+}
+
 func handler(w http.ResponseWriter, r *http.Request, f func()([]byte, error)) {
 	if json, err := f(); err == nil {
 		header := w.Header()
@@ -128,6 +154,14 @@ func yearsHandler(w http.ResponseWriter, r *http.Request) {
 	handler(w, r, groupJumpsByYear)
 }
 
+func jumpHandler(w http.ResponseWriter, r *http.Request) {
+	if i, err := strconv.Atoi(r.FormValue("n")); err == nil {
+		handler(w, r, func()([]byte, error) { return getJumpDetails(i) })
+	} else {
+		http.NotFound(w, r)
+	}
+}
+
 func main() {
 	fmt.Println("logbook server starting")
 	if c, e := sqlite3.Open(DATABASE_FILE); e == nil {
@@ -137,6 +171,7 @@ func main() {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/x/stats", statsHandler)
 		mux.HandleFunc("/x/years", yearsHandler)
+		mux.HandleFunc("/x/jump", jumpHandler)
 		mux.Handle("/", http.FileServer(http.Dir("./")))
 		http.ListenAndServe("localhost:8080", mux)
 	} else {
