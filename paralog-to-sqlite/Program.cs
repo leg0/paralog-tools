@@ -9,6 +9,7 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Linq;
 using System.Globalization;
+using CommandLine.Text;
 
 namespace paralog_to_sqlite
 {
@@ -19,6 +20,12 @@ namespace paralog_to_sqlite
 
         [Option("sqlite-database", DefaultValue = "sqlite.db", Required = false, HelpText = "SQLite3 database file")]
         public string SqliteDatabase { get; set; }
+
+        [HelpOption]
+        public string GetUsage()
+        {
+            return HelpText.AutoBuild(this, (HelpText c) => HelpText.DefaultParsingErrorsHandler(this, c));
+        }
     }
     class Program
     {
@@ -39,6 +46,17 @@ namespace paralog_to_sqlite
                 return;
             }
 
+            if (File.Exists(opt.SqliteDatabase))
+            {
+                Console.WriteLine("Sqlite database {0} already exists.", opt.SqliteDatabase);
+                return;
+            }
+
+            if (!File.Exists(opt.ParalogDatabase))
+            {
+                Console.WriteLine("Paralog database {0} does not exist.", opt.ParalogDatabase);
+                return;
+            }
             Console.Write("Creating sqlite database ... ");
             var sqlite = new SQLiteConnection("Data Source=" + opt.SqliteDatabase);
             sqlite.Open();
@@ -90,7 +108,7 @@ namespace paralog_to_sqlite
                     cmd.Prepare();
                     var p = cmd.Parameters;
                     p.AddWithValue("@n", int.Parse(jump.Attribute("n").Value));
-                    p.AddWithValue("@ts", jump.Attribute("ts").Value);
+                    p.AddWithValue("@ts", DateTime.Parse(jump.Attribute("ts").Value));
                     var dz = jump.Element("dz");
                     p.AddWithValue("@dz", dz != null ? dz.Value : null);
                     p.AddWithValue("@ac", jump.Element("ac").Value);
