@@ -1,6 +1,6 @@
-/// <reference path="DefinitelyTyped/jquery/jquery.d.ts" />
-/// <reference path="DefinitelyTyped/knockout/knockout.d.ts" />
-/// <reference path="DefinitelyTyped/sammyjs/sammyjs.d.ts" />
+/// <reference path="Scripts/typings/jquery/jquery.d.ts" />
+/// <reference path="Scripts/typings/knockout/knockout.d.ts" />
+/// <reference path="Scripts/typings/sammyjs/sammyjs.d.ts" />
 
 var model : AppViewModel;
 
@@ -12,15 +12,17 @@ $(function ()
 
 class YearModel {
 
-    num: KnockoutObservable<number>;
-    count: KnockoutObservable<number>;
-    months: KnockoutObservableArray<MonthModel>;
+    num: KnockoutObservable<number> = ko.observable(0);
+    count: KnockoutObservable<number> = ko.observable(0);
+    months: KnockoutObservableArray<MonthModel> = ko.observableArray([]);
 
     constructor(y)
     {
-        this.num = ko.observable(y.num)
-        this.count = ko.observable(y.count)
-        this.months = ko.observableArray(y.months.map((m) => { return new MonthModel(this, m) }))
+        this.num(y.num);
+        this.count(y.count);
+        if (y.months) {
+            this.months(y.months.map((m) => { return new MonthModel(this, m) }));
+        }
     }
 
     // Navigates to an address of the year and optionally month of the year.
@@ -99,13 +101,13 @@ class JumpModel
 {
     isLoaded: KnockoutObservable<boolean> = ko.observable(false);
     num: KnockoutObservable<number> = ko.observable(1234);
-    aircraft: KnockoutObservable<AircraftModel> = ko.observable();
-    dropzone: KnockoutObservable<string> = ko.observable();
-    exit: KnockoutObservable<number> = ko.observable();
-    open: KnockoutObservable<number> = ko.observable();
-    delay: KnockoutObservable<number> = ko.observable();
+    aircraft: KnockoutObservable<AircraftModel> = ko.observable(null);
+    dropzone: KnockoutObservable<string> = ko.observable(null);
+    exit: KnockoutObservable<number> = ko.observable(null);
+    open: KnockoutObservable<number> = ko.observable(null);
+    delay: KnockoutObservable<number> = ko.observable(null);
     type: KnockoutObservable<string> = ko.observable("Wingsuit");
-    equipment: KnockoutObservable<string> = ko.observable();
+    equipment: KnockoutObservable<string> = ko.observable("");
     //profile: KnockoutComputed<number>; // points
 
     jump: any = null;
@@ -140,7 +142,7 @@ class JumpsTabViewModel implements ViewModel
 
     constructor()
     {
-        var years = this.years = ko.observableArray()
+        var years = this.years = ko.observableArray([])
         this.count = ko.computed(() =>
         {
             var ys = years()
@@ -148,9 +150,9 @@ class JumpsTabViewModel implements ViewModel
                 ? ys.reduce((acc, y) => { return acc + y.count(); }, 0)
                 : 0;
         })
-        this.selectedYear = ko.observable()
-        this.selectedMonth = ko.observable()
-        this.selectedJump = ko.observable()
+        this.selectedYear = ko.observable(null)
+        this.selectedMonth = ko.observable(null)
+        this.selectedJump = ko.observable(null)
 
         this.getYearsAsync()
     }
@@ -159,7 +161,7 @@ class JumpsTabViewModel implements ViewModel
 
     getYearsAsync(fn?: Function)
     {
-        $.getJSON("./years.cgi", (data) =>
+        $.getJSON("./x/years", (data) =>
         {
             if (data && data.years)
                 this.years(data.years.map((y) => { return new YearModel(y) }))
@@ -244,7 +246,7 @@ class UploadTabViewModel implements ViewModel
 class AppViewModel implements ViewModel
 {
 
-    title: string = "YOUR NAME's skydiving logbook";
+    title: string = "lego's skydiving logbook";
     activeTab: KnockoutObservable<string> = ko.observable('jumps');
 
     tabs: ViewModel[] = [

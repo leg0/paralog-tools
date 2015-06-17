@@ -31,9 +31,9 @@
         </div>
         <div class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
-            <li data-bind="css: { active: activeTab()=='jumps'   }"><a href="#/jumps">Jumps</a></li>
+            <li data-bind="css: { active: activeTab()=='jumps'   }"><a href="#/jumps">Browse jumps</a></li>
             <li data-bind="css: { active: activeTab()=='stats'   }"><a href="#/stats">Statistics</a></li>
-            <li data-bind="css: { active: activeTab()=='upload'  }"><a href="#/upload">Upload .pmz file</a></li>
+            <li data-bind="css: { active: activeTab()=='upload'  }"><a href="#/upload">Upload .pmz</a></li>
             <!-- <li data-bind="css: { active: activeTab()=='log'     }"><a href="#/log">Log a jump</a></li> -->
           </ul>
         </div><!--/.nav-collapse -->
@@ -45,7 +45,6 @@
     <div class="container" data-bind="with: jumpsTab">
         <div class="row">
             <div class="logbook2 col-lg-3">
-                <h1>Years in sport</h1>
                 <!-- ko foreach: years -->
                 <a href="#" data-bind="text: num, click: function() { navigateTo() }"></a>: <span data-bind="text: count"></span> jumps<br/>
                     <div class="bar" data-bind="style: { width : count() + 'px'}"></div>
@@ -53,7 +52,7 @@
             </div>
 
             <div class="logbook2 col-lg-4" data-bind="with: selectedYear">
-                <h1>Jumps made in <span data-bind="text: num"></span></h1>
+                <h3>Jumps made in <span data-bind="text: num"></span></h3>
                 <!-- ko foreach: months -->
                     <a
                         href="#"  
