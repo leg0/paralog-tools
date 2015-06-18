@@ -106,7 +106,7 @@ class JumpModel
     exit: KnockoutObservable<number> = ko.observable(null);
     open: KnockoutObservable<number> = ko.observable(null);
     delay: KnockoutObservable<number> = ko.observable(null);
-    type: KnockoutObservable<string> = ko.observable("Wingsuit");
+    type: KnockoutObservable<string> = ko.observable("");
     equipment: KnockoutObservable<string> = ko.observable("");
     //profile: KnockoutComputed<number>; // points
 
@@ -146,26 +146,21 @@ interface ViewModel
 
 class JumpsTabViewModel implements ViewModel
 {
-
-    years: KnockoutObservableArray<YearModel>;
+    years: KnockoutObservableArray<YearModel> = ko.observableArray([])
     count: KnockoutComputed<number>;
-    selectedYear: KnockoutObservable<YearModel>;
-    selectedMonth: KnockoutObservable<MonthModel>;
-    selectedJump: KnockoutObservable<JumpModel>;
+    selectedYear: KnockoutObservable<YearModel> = ko.observable(null)
+    selectedMonth: KnockoutObservable<MonthModel> = ko.observable(null)
+    selectedJump: KnockoutObservable<JumpModel> = ko.observable(null)
 
     constructor()
     {
-        var years = this.years = ko.observableArray([])
         this.count = ko.computed(() =>
         {
-            var ys = years()
+            var ys = this.years()
             return ys
-                ? ys.reduce((acc, y) => { return acc + y.count(); }, 0)
-                : 0;
+                ? ys.reduce((acc:number, y:YearModel) => { return acc + y.count() }, 0)
+                : 0
         })
-        this.selectedYear = ko.observable(null)
-        this.selectedMonth = ko.observable(null)
-        this.selectedJump = ko.observable(null)
 
         this.getYearsAsync()
     }
@@ -174,7 +169,7 @@ class JumpsTabViewModel implements ViewModel
 
     getYearsAsync(fn?: Function)
     {
-        $.getJSON("./x/years", (data) =>
+        $.getJSON("./x/group-by-year", (data) =>
         {
             if (data && data.years)
                 this.years(data.years.map((y) => { return new YearModel(y) }))
@@ -248,8 +243,39 @@ class JumpsTabViewModel implements ViewModel
     }
 }
 
+class BasicStatsModel {
+    jumpsTotal: number
+    jumpsLastYear: number
+    jumpsLast3months: number
+    dropzones: number
+    aircraft: number
+
+    constructor(o) {
+        this.jumpsTotal = o.jumps_total
+        this.jumpsLastYear = o.jumps_last_year
+        this.jumpsLast3months = o.jumps_last_3months
+        this.dropzones = o.dropzones
+        this.aircraft = o.aircraft
+    }
+}
+
 class StatisticsTabViewModel implements ViewModel
 {
+    basicStats: KnockoutObservable<BasicStatsModel> = ko.observable(null)
+
+    constructor(stats)
+    {
+        this.getBasicStatsAsync()
+    }
+
+    getBasicStatsAsync()
+    {
+        $.getJSON("./x/stats", (data) => {
+            if (data && data.stats) {
+                this.basicStats(new BasicStatsModel(data.stats))
+            }
+        })
+    }
 }
 
 class UploadTabViewModel implements ViewModel
@@ -258,17 +284,12 @@ class UploadTabViewModel implements ViewModel
 
 class AppViewModel implements ViewModel
 {
-
     title: string = "lego's skydiving logbook";
     activeTab: KnockoutObservable<string> = ko.observable('jumps');
 
-    tabs: ViewModel[] = [
-        new JumpsTabViewModel(),
-        new StatisticsTabViewModel(),
-        new UploadTabViewModel()
-    ];
+    tabs: ViewModel[] = [];
 
-    jumpsTab: KnockoutObservable<any> = ko.observable(this.tabs[0]);
+    jumpsTab: KnockoutObservable<any> = ko.observable();
     statsTab: KnockoutObservable<any> = ko.observable();
     uploadTab: KnockoutObservable<any> = ko.observable();
     logTab: KnockoutObservable<any> = ko.observable();
@@ -295,11 +316,30 @@ class AppViewModel implements ViewModel
         this.deselectAllTabs_();
         switch (tabId)
         {
-            case 'jumps':  this.jumpsTab(this.tabs[0]); break;
-            case 'stats':  this.statsTab(this.tabs[1]); break;
-            case 'upload': this.uploadTab(this.tabs[2]); break;
-            case 'log':    this.contactsTab(this.tabs[3]); break;
-            case 'conta':  this.contactsTab(this.tabs[4]); break;
+            case 'jumps':
+                if (!this.tabs[0]) {
+                    this.tabs[0] = new JumpsTabViewModel()
+                }
+                this.jumpsTab(this.tabs[0]);
+                break;
+
+            case 'stats':
+                if (!this.tabs[1]) {
+                    this.tabs[1] = new StatisticsTabViewModel()
+                }
+                this.statsTab(this.tabs[1]);
+                break;
+
+            case 'upload':
+                console.log("WTF? Upload?")
+                if (!this.tabs[2]) {
+                    this.tabs[2] = new UploadTabViewModel()
+                }
+                this.uploadTab(this.tabs[2]);
+                break;
+
+            //case 'log':    this.contactsTab(this.tabs[3]); break;
+            //case 'conta':  this.contactsTab(this.tabs[4]); break;
         }
 
         this.activeTab(tabId);
@@ -345,10 +385,13 @@ function initSammy(self: AppViewModel)
             self.jumpsTab().selectedMonth(undefined)
             self.jumpsTab().selectedJump(undefined)
         })
-        this.get("#/stats", function () { self.selectTab('stats') })
+        this.get("#/stats", function ()
+        {
+            self.selectTab('stats')
+        })
         this.get("#/upload", function () { self.selectTab('upload') })
         this.get("#/log", function () { self.selectTab('log') })
         this.get("#/contact", function () { self.selectTab('contact') })
-        //this.get(".*", function() { location.hash = "#/jumps" })
+        this.get(".*", function() { location.hash = "#/jumps" })
     }).run();
 }
