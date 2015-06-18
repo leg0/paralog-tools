@@ -262,19 +262,60 @@ class BasicStatsModel {
 class StatisticsTabViewModel implements ViewModel
 {
     basicStats: KnockoutObservable<BasicStatsModel> = ko.observable(null)
+    groupedByDz: KnockoutObservableArray<any> = ko.observableArray(null)
+    groupedByAc: KnockoutObservableArray<any> = ko.observableArray(null)
 
-    constructor(stats)
+    constructor()
     {
         this.getBasicStatsAsync()
     }
 
-    getBasicStatsAsync()
-    {
+    getBasicStatsAsync() {
         $.getJSON("./x/stats", (data) => {
             if (data && data.stats) {
                 this.basicStats(new BasicStatsModel(data.stats))
             }
         })
+    }
+
+    getGroupedByDzAsync(fn? : Function) {
+        $.getJSON("./x/group-by-dropzone", (data) => {
+            if (data && data.by_dz) {
+                this.groupedByDz(data.by_dz)
+                if (fn) { fn() }
+            }
+        })
+    }
+
+    getGroupedByAcAsync(fn? : Function) {
+        $.getJSON("./x/group-by-aircraft", (data) => {
+            if (data && data.by_ac) {
+                this.groupedByAc(data.by_ac)
+                if (fn) { fn() }
+            }
+        })
+    }
+
+    getGroupedByType(fn?: Function) {
+        // TODO: actual implementation
+    }
+
+    showAcGroup() {
+        this.getGroupedByAcAsync(() => {
+            this.groupedByDz(null);
+        });
+    }
+
+    showDzGroup() {
+        this.getGroupedByDzAsync(() => {
+            this.groupedByAc(null);
+        });
+    }
+
+    showTypeGroup() {
+        // TODO: actual implementation
+        this.groupedByAc(null)
+        this.groupedByDz(null)
     }
 }
 
@@ -311,7 +352,7 @@ class AppViewModel implements ViewModel
         this.contactsTab(null);
     }
 
-    selectTab(tabId: string)
+    selectTab(tabId: string): ViewModel
     {
         this.deselectAllTabs_();
         switch (tabId)
@@ -328,7 +369,7 @@ class AppViewModel implements ViewModel
                     this.tabs[1] = new StatisticsTabViewModel()
                 }
                 this.statsTab(this.tabs[1]);
-                break;
+                break;;
 
             case 'upload':
                 console.log("WTF? Upload?")
@@ -343,6 +384,7 @@ class AppViewModel implements ViewModel
         }
 
         this.activeTab(tabId);
+        return this.activeTab();
     }
 }
 
@@ -361,10 +403,10 @@ function initSammy(self: AppViewModel)
     {
         this.get("#/jumps/date/:yearNum/:monthNum/jump/:jumpNum", function ()
         {
-            self.selectTab('jumps')
-            var jt = self.jumpsTab()
-            jt.selectYearX(parseInt(this.params.yearNum), parseInt(this.params.monthNum))
-            jt.selectedJump(findJump(this.params.jumpNum))
+            self.selectTab('jumps');
+            var jt = self.jumpsTab();
+            jt.selectYearX(parseInt(this.params.yearNum), parseInt(this.params.monthNum));
+            jt.selectedJump(findJump(this.params.jumpNum));
         })
         this.get("#/jumps/date/:yearNum/:monthNum", function ()
         {
@@ -374,9 +416,9 @@ function initSammy(self: AppViewModel)
         })
         this.get("#/jumps/date/:yearNum", function ()
         {
-            self.selectTab('jumps')
-            var jt = self.jumpsTab()
-            jt.selectYearX(parseInt(this.params.yearNum))
+            self.selectTab('jumps');
+            var jt = self.jumpsTab();
+            jt.selectYearX(parseInt(this.params.yearNum));
         })
         this.get("#/jumps", function ()
         {
@@ -385,13 +427,27 @@ function initSammy(self: AppViewModel)
             self.jumpsTab().selectedMonth(undefined)
             self.jumpsTab().selectedJump(undefined)
         })
+        this.get("#/stats/ac", function () {
+            self.selectTab('stats')
+            self.statsTab().showAcGroup()
+        })
+        this.get("#/stats/dz", function () {
+            self.selectTab('stats');
+            self.statsTab().showDzGroup();
+        })
+        this.get("#/stats/type", function () {
+            self.selectTab('stats');
+            self.statsTab().showTypeGroup();
+        })
         this.get("#/stats", function ()
         {
             self.selectTab('stats')
+            self.statsTab().groupedByAc(null)
+            self.statsTab().groupedByDz(null)
         })
         this.get("#/upload", function () { self.selectTab('upload') })
-        this.get("#/log", function () { self.selectTab('log') })
-        this.get("#/contact", function () { self.selectTab('contact') })
-        this.get(".*", function() { location.hash = "#/jumps" })
+        //this.get("#/log", function () { self.selectTab('log') })
+        //this.get("#/contact", function () { self.selectTab('contact') })
+        //this.get(".*", function() { location.hash = "#/jumps" })
     }).run();
 }

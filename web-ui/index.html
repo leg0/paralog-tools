@@ -108,17 +108,34 @@
 
     <div class="container invisible" data-bind="with: statsTab, css: { invisible: !statsTab }">
         <div class="row">
-            <div class="logbook2 col-lg-5">
+            <div class="logbook2 col-lg-3">
                 <!--<h3>Statistics</h3>-->
                 <!-- ko if: basicStats -->
                     <span data-bind="text: basicStats().jumpsTotal"></span> jumps total.<br />
                     <a href="#" data-bind="text: basicStats().jumpsLastYear"></a> jumps in last 12 months.<br />
                     <a href="#" data-bind="text: basicStats().jumpsLast3months"></a> jumps in last 3 months.<br />
-                    Jumped at <a href="#" data-bind="text: basicStats().dropzones"></a> different dropzones.<br />
-                    Jumped from <a href="#" data-bind="text: basicStats().aircraft"></a> different aircraft.<br />
+                    Jumped at <a href="#/stats/dz" data-bind="text: basicStats().dropzones"></a> different dropzones.<br />
+                    Jumped from <a href="#/stats/ac" data-bind="text: basicStats().aircraft"></a> different aircraft.<br />
+                    <a href="#/stats/type">Types of jumps</a>.
                 <!--/ko -->
                 <!-- ko ifnot: basicStats -->
                 <img src="img/busy.gif" alt="data is not loaded" />
+                <!-- /ko -->
+            </div>
+            <div class="logbook2 col-lg-4" data-bind="visible: groupedByDz">
+                <h3>Dropzones</h3>
+                <!-- ko foreach: groupedByDz -->
+                <a href="#" data-bind="text: dz, click: function() { navigateTo() }"></a>:
+                <span data-bind="text: count"></span> jumps<br />
+                <div class="bar" data-bind="style: { width : count + 'px'}"></div>
+                <!-- /ko -->
+            </div>
+            <div class="logbook2 col-lg-5" data-bind="visible: groupedByAc">
+                <h3>Aircraft</h3>
+                <!-- ko foreach: groupedByAc -->
+                <a href="#" data-bind="text: ac, click: function() { navigateTo() }"></a>:
+                <span data-bind="text: count"></span> jumps<br />
+                <div class="bar" data-bind="style: { width : count + 'px'}"></div>
                 <!-- /ko -->
             </div>
         </div>

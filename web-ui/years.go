@@ -33,7 +33,16 @@ func groupJumpsByYear()([]byte, error) {
 
 	yrs := make([]YearMonthGroup, 0)
 
-	sql := "select Y, M, count(*) C, min(n), max(n) from (select cast(strftime('%Y', ts) as integer) Y, cast(strftime('%m', ts) as integer) M, n from jump) group by Y, M"
+	sql := `
+		select Y, M, count(*) C, min(n), max(n) 
+		from (
+			select
+				cast(strftime('%Y', ts) as integer) Y,
+				cast(strftime('%m', ts) as integer) M,
+				n
+			from jump)
+		group by Y, M
+		order by Y desc`
 	prevYear := 0
 	ymg := YearMonthGroup{}
 	for s, err := sqliteConn.Query(sql); err == nil; err = s.Next() {
@@ -56,6 +65,58 @@ func groupJumpsByYear()([]byte, error) {
 		yrs = append(yrs, ymg)
 	}
 	return json.Marshal(Years{yrs})
+}
+
+func groupJumpsByDropzone()([]byte, error) {
+	type DzGroup struct {
+		Name string `json:"dz"`
+		Count int `json:"count"`
+	}
+	
+	type AllDz struct {
+		X []DzGroup `json:"by_dz"`
+	}
+	
+	sql := `
+		select d.name dz, count(*) c
+		from jump j
+			left outer join dropzone d on j.dz_id=d.rowid
+		group by j.dz_id
+		order by dz`
+	
+	g := make([]DzGroup, 0)
+	for s, err := sqliteConn.Query(sql); err == nil; err = s.Next() {
+		dg := DzGroup {}
+		s.Scan(&dg.Name, &dg.Count)
+		g = append(g, dg)
+	}
+	return json.Marshal(AllDz { g })
+}
+
+func groupJumpsByAircraft()([]byte, error) {
+	type AcGroup struct {
+		Name string `json:"ac"`
+		Count int `json:"count"`
+	}
+	
+	type AllAc struct {
+		X []AcGroup `json:"by_ac"`
+	}
+	
+	sql := `
+		select a.type ac, count(*) c
+		from jump j
+			left outer join aircraft a on j.ac_id=a.rowid
+		group by j.ac_id
+		order by ac`
+	
+	g := make([]AcGroup, 0)
+	for s, err := sqliteConn.Query(sql); err == nil; err = s.Next() {
+		dg := AcGroup {}
+		s.Scan(&dg.Name, &dg.Count)
+		g = append(g, dg)
+	}
+	return json.Marshal(AllAc { g })
 }
 
 // Execute a query that returns a single row with one value.
@@ -170,7 +231,9 @@ func main() {
 		
 		mux := http.NewServeMux()
 		mux.HandleFunc("/x/stats", statsHandler)
-		mux.HandleFunc("/x/years", yearsHandler)
+		mux.HandleFunc("/x/group-by-year", yearsHandler)
+		mux.HandleFunc("/x/group-by-dropzone", func (w http.ResponseWriter, r *http.Request) {	handler(w, r, groupJumpsByDropzone) })
+		mux.HandleFunc("/x/group-by-aircraft", func (w http.ResponseWriter, r *http.Request) {	handler(w, r, groupJumpsByAircraft) })
 		mux.HandleFunc("/x/jump", jumpHandler)
 		mux.Handle("/", http.FileServer(http.Dir("./")))
 		http.ListenAndServe("localhost:8080", mux)
