@@ -2,14 +2,40 @@ package main
 
 import (
 	"code.google.com/p/go-sqlite/go1/sqlite3"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 const DATABASE_FILE = "sqlite.db"
-var sqliteConn *sqlite3.Conn	
+var sqliteConn *sqlite3.Conn
+
+type gzipResponseWriter struct {
+	io.Writer
+	http.ResponseWriter
+}
+
+func (w gzipResponseWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
+
+func makeGzipHandler(fn http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			fn(w, r)
+		} else {
+			w.Header().Set("Content-Encoding", "gzip")
+			gz := gzip.NewWriter(w)
+			defer gz.Close()
+			gzr := gzipResponseWriter{Writer: gz, ResponseWriter: w}
+			fn(gzr, r)
+		}
+	}
+}
 
 // Counts the jumps by months and accumulates by year.
 //
@@ -72,18 +98,18 @@ func groupJumpsByDropzone()([]byte, error) {
 		Name string `json:"dz"`
 		Count int `json:"count"`
 	}
-	
+
 	type AllDz struct {
 		X []DzGroup `json:"by_dz"`
 	}
-	
+
 	sql := `
 		select d.name dz, count(*) c
 		from jump j
 			left outer join dropzone d on j.dz_id=d.rowid
 		group by j.dz_id
 		order by dz`
-	
+
 	g := make([]DzGroup, 0)
 	for s, err := sqliteConn.Query(sql); err == nil; err = s.Next() {
 		dg := DzGroup {}
@@ -98,11 +124,11 @@ func groupJumpsByAircraft()([]byte, error) {
 		Name string `json:"ac"`
 		Count int `json:"count"`
 	}
-	
+
 	type AllAc struct {
 		X []AcGroup `json:"by_ac"`
 	}
-	
+
 	sql := `
 		select a.type ac, count(*) c
 		from jump j
@@ -223,19 +249,24 @@ func jumpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func makeHandler(f func()([]byte, error)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+			handler(w, r, f)
+		}
+}
+
 func main() {
 	fmt.Println("logbook server starting")
 	if c, e := sqlite3.Open(DATABASE_FILE); e == nil {
 		fmt.Println("logbook database opened")
 		sqliteConn = c
-		
+
 		mux := http.NewServeMux()
 		mux.HandleFunc("/x/stats", statsHandler)
-		mux.HandleFunc("/x/group-by-year", yearsHandler)
-		mux.HandleFunc("/x/group-by-dropzone", func (w http.ResponseWriter, r *http.Request) {	handler(w, r, groupJumpsByDropzone) })
-		mux.HandleFunc("/x/group-by-aircraft", func (w http.ResponseWriter, r *http.Request) {	handler(w, r, groupJumpsByAircraft) })
-		mux.HandleFunc("/x/jump", jumpHandler)
-		mux.Handle("/", http.FileServer(http.Dir("./")))
+		mux.HandleFunc("/x/group-by-year", makeGzipHandler(yearsHandler))
+		mux.HandleFunc("/x/group-by-dropzone", makeGzipHandler(makeHandler(groupJumpsByDropzone)))
+		mux.HandleFunc("/x/group-by-aircraft", makeGzipHandler(makeHandler(groupJumpsByAircraft)))
+		mux.HandleFunc("/x/jump", makeGzipHandler(jumpHandler))
 		http.ListenAndServe("localhost:8080", mux)
 	} else {
 		fmt.Println(e)
