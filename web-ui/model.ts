@@ -101,6 +101,7 @@ class JumpModel
 {
     isLoaded: KnockoutObservable<boolean> = ko.observable(false);
     num: KnockoutObservable<number> = ko.observable(0);
+    time: KnockoutObservable<string> = ko.observable("");
     aircraft: KnockoutObservable<AircraftModel> = ko.observable(null);
     dropzone: KnockoutObservable<string> = ko.observable(null);
     exit: KnockoutObservable<number> = ko.observable(null);
@@ -125,6 +126,7 @@ class JumpModel
             console.log("Got jump", n, "details:", j)
             if (j)
             {
+                this.time(j.time)
                 this.aircraft(j.aircraft)
                 this.dropzone(j.dropzone)
                 this.exit(j.exit)
@@ -451,3 +453,4 @@ function initSammy(self: AppViewModel)
         //this.get(".*", function() { location.hash = "#/jumps" })
     }).run();
 }
+

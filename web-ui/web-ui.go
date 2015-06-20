@@ -198,6 +198,7 @@ func getBasicStats()([]byte, error) {
 func getJumpDetails(jumpNumber int)([]byte, error) {
 	type JumpDetails struct {
 		Num int `json:"num"`
+		Time string `json:"time"`
 		Aircraft string `json:"aircraft"`
 		Dropzone string `json:"dropzone"`
 		Exit int `json:"exit"`
@@ -206,14 +207,14 @@ func getJumpDetails(jumpNumber int)([]byte, error) {
 		Type string `json:"type"`
 	}
 
-	sql := "select j.n, ac.type, dz.name, j.exit, j.open, j.type " +
+	sql := "select j.n, ac.type, dz.name, j.exit, j.open, j.type, j.ts " +
 		"from (select * from jump where n=@n) j" +
 			" left outer join aircraft ac on j.ac_id = ac.rowid" +
 			" left outer join dropzone dz on j.dz_id = dz.rowid"
 
 	if stmt, err := sqliteConn.Query(sql, jumpNumber); err == nil {
 		j := JumpDetails {}
-		stmt.Scan(&j.Num, &j.Aircraft, &j.Dropzone, &j.Exit, &j.Open, &j.Type)
+		stmt.Scan(&j.Num, &j.Aircraft, &j.Dropzone, &j.Exit, &j.Open, &j.Type, &j.Time)
 		return json.Marshal(j)
 	} else {
 		return nil, err
