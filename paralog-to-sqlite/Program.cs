@@ -108,7 +108,9 @@ namespace paralog_to_sqlite
                     cmd.Prepare();
                     var p = cmd.Parameters;
                     p.AddWithValue("@n", int.Parse(jump.Attribute("n").Value));
-                    p.AddWithValue("@ts", DateTime.Parse(jump.Attribute("ts").Value));
+                    var ts = jump.Attribute("ts").Value;
+                    if (!ts.EndsWith("Z")) ts += ":00";
+                    p.AddWithValue("@ts", ts);
                     var dz = jump.Element("dz");
                     p.AddWithValue("@dz", dz != null ? dz.Value : null);
                     p.AddWithValue("@ac", jump.Element("ac").Value);
