@@ -10,6 +10,7 @@ using System.Xml.Linq;
 using System.Linq;
 using System.Globalization;
 using CommandLine.Text;
+using System.Diagnostics;
 
 namespace paralog_to_sqlite
 {
@@ -23,6 +24,9 @@ namespace paralog_to_sqlite
 
         [Option('f', "force-overwrite", DefaultValue = false, Required = false, HelpText = "Force overwriting of sqlite database")]
         public bool ForceOverwrite { get; set; }
+
+        [Option('u', "update", DefaultValue = false, Required = false, HelpText = "Update sqlite database, new data only")]
+        public bool Update { get; set; }
 
         [HelpOption]
         public string GetUsage()
@@ -55,7 +59,15 @@ namespace paralog_to_sqlite
                 return;
             }
 
-            if (opt.ForceOverwrite)
+            if (opt.Update)
+            {
+                if (!File.Exists(opt.SqliteDatabase))
+                {
+                    Console.WriteLine("Sqlite database {0} missing.", opt.SqliteDatabase);
+                    opt.Update = false;
+                }
+            }
+            else if (opt.ForceOverwrite)
             {
                 File.Delete(opt.SqliteDatabase + ".bak");
                 File.Move(opt.SqliteDatabase, opt.SqliteDatabase + ".bak");
@@ -66,18 +78,31 @@ namespace paralog_to_sqlite
                 return;
             }
 
-            Console.Write("Creating sqlite database ... ");
+            var minJumpToCopy = 1L;
             var sqlite = new SQLiteConnection("Data Source=" + opt.SqliteDatabase);
             sqlite.Open();
-            exec(sqlite, "create table dropzone(name, lat, lon, note)");
-            exec(sqlite, "create table aircraft(type, tail, pic)");
-            exec(sqlite, "create table jump(n, ts, dz_id, ac_id, type, exit, open, note)");
-            exec(sqlite, "create table profile(jump_id, type, qne)");
-            exec(sqlite, "create table profile_point(profile_id, t, alt, lat, lon)");
-            //exec(sqlite, "create table team(name, ...)");
-            //exec(sqlite, "create table equipment(name, type)");
-            //exec(sqlite, "create table jump_equipment(jump_id, equipment_id)");
-            Console.WriteLine("done");
+            if (!opt.Update)
+            {
+                Console.Write("Creating sqlite database ... ");
+                exec(sqlite, "create table dropzone(name unique, lat, lon, note)");
+                exec(sqlite, "create table aircraft(type unique, tail , pic)");
+                exec(sqlite, "create table jump(n, ts, dz_id, ac_id, type, exit, open, note)");
+                exec(sqlite, "create table profile(jump_id, type, qne)");
+                exec(sqlite, "create table profile_point(profile_id, t, alt, lat, lon)");
+                //exec(sqlite, "create table team(name, ...)");
+                //exec(sqlite, "create table equipment(name, type)");
+                //exec(sqlite, "create table jump_equipment(jump_id, equipment_id)");
+                Console.WriteLine("done");
+            }
+            else
+            {
+                using (var cmd = sqlite.CreateCommand())
+                {
+                    cmd.CommandText = "select coalesce(max(n), 0)+1 from jump";
+                    var x = cmd.ExecuteScalar();
+                    minJumpToCopy = (long)x;
+                }
+            }
 
             Console.Write("Loading paralog database ...");
             using (var fs = new FileStream(opt.ParalogDatabase, FileMode.Open))
@@ -86,7 +111,9 @@ namespace paralog_to_sqlite
                 var xdoc = XDocument.Load(gs);
                 Console.WriteLine("done");
 
-                var jumps = xdoc.Descendants("jump");
+                var jumps = from j in xdoc.Descendants("jump")
+                                where int.Parse(j.Attribute("n").Value) >= minJumpToCopy
+                                select j;
                 using (var tr = sqlite.BeginTransaction())
                 {
                     CopyDropzones(sqlite, tr, jumps);
@@ -182,13 +209,19 @@ namespace paralog_to_sqlite
                 select g;
             foreach (var ac in acs)
             {
-                using (var cmd = sqlite.CreateCommand())
+                try
                 {
+                    var cmd = sqlite.CreateCommand();
                     cmd.Transaction = tr;
                     cmd.CommandText = "insert into aircraft values(@type, null, null)";
                     cmd.Prepare();
                     cmd.Parameters.AddWithValue("@type", ac.Key.name);
                     cmd.ExecuteNonQuery();
+                }
+                catch (SQLiteException e)
+                {
+                    // Probably unique constraint violation.
+                    Debug.WriteLine("{0}", e);
                 }
             }
             Console.WriteLine("done");
@@ -204,13 +237,20 @@ namespace paralog_to_sqlite
 
             foreach (var dz in dzs)
             {
-                using (var cmd = sqlite.CreateCommand())
+                try
                 {
+                    var cmd = sqlite.CreateCommand();
                     cmd.Transaction = tr;
                     cmd.CommandText = "insert into dropzone values(@name, null, null, null)";
                     cmd.Prepare();
                     cmd.Parameters.AddWithValue("name", dz.Key.name);
                     cmd.ExecuteNonQuery();
+                }
+                catch (SQLiteException e)
+                {
+                    // Probably about violating unique constraint, which is ok.
+                    // Otherwise, .. whatever.
+                    Debug.WriteLine("{0}", e);
                 }
             }
             Console.WriteLine("done");
