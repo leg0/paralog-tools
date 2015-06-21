@@ -36,27 +36,16 @@ namespace paralog_to_sqlite
     }
     class Program
     {
-        static void exec(SQLiteConnection sqlite, string query)
-        {
-            using (var cmd = sqlite.CreateCommand())
-            {
-                cmd.CommandText = query;
-                cmd.ExecuteNonQuery();
-            }
-        }
+        Options opt;
+        SQLiteConnection sqlite;
 
-        static void Main(string[] args)
+        Program(Options opt)
         {
-            var opt = new Options();
-            if (!CommandLine.Parser.Default.ParseArguments(args, opt))
-            {
-                return;
-            }
-
+            this.opt = opt;
             if (!File.Exists(opt.ParalogDatabase))
             {
                 Console.WriteLine("Paralog database {0} does not exist.", opt.ParalogDatabase);
-                return;
+                throw new Exception();
             }
 
             if (opt.Update)
@@ -75,56 +64,91 @@ namespace paralog_to_sqlite
             else if (File.Exists(opt.SqliteDatabase))
             {
                 Console.WriteLine("Sqlite database {0} already exists.", opt.SqliteDatabase);
+                throw new Exception();
+            }
+
+            sqlite = new SQLiteConnection("Data Source=" + opt.SqliteDatabase);
+            sqlite.Open();
+        }
+
+        void ExecuteNonQuery(string query)
+        {
+            var cmd = sqlite.CreateCommand();
+            cmd.CommandText = query;
+            cmd.ExecuteNonQuery();
+        }
+
+        object ExecuteScalar(string query)
+        {
+            var cmd = sqlite.CreateCommand();
+            cmd.CommandText = query;
+            return cmd.ExecuteScalar();
+        }
+
+        static void Main(string[] args)
+        {
+            var opt = new Options();
+            if (!CommandLine.Parser.Default.ParseArguments(args, opt))
+            {
                 return;
             }
 
-            var minJumpToCopy = 1L;
-            var sqlite = new SQLiteConnection("Data Source=" + opt.SqliteDatabase);
-            sqlite.Open();
-            if (!opt.Update)
-            {
-                Console.Write("Creating sqlite database ... ");
-                exec(sqlite, "create table dropzone(name unique, lat, lon, note)");
-                exec(sqlite, "create table aircraft(type unique, tail , pic)");
-                exec(sqlite, "create table jump(n, ts, dz_id, ac_id, type, exit, open, note)");
-                exec(sqlite, "create table profile(jump_id, type, qne)");
-                exec(sqlite, "create table profile_point(profile_id, t, alt, lat, lon)");
-                //exec(sqlite, "create table team(name, ...)");
-                //exec(sqlite, "create table equipment(name, type)");
-                //exec(sqlite, "create table jump_equipment(jump_id, equipment_id)");
-                Console.WriteLine("done");
-            }
-            else
-            {
-                using (var cmd = sqlite.CreateCommand())
-                {
-                    cmd.CommandText = "select coalesce(max(n), 0)+1 from jump";
-                    var x = cmd.ExecuteScalar();
-                    minJumpToCopy = (long)x;
-                }
-            }
+            var p = new Program(opt);
+            p.Run();
+        }
 
+        void CreateTables()
+        {
+            Console.Write("Creating sqlite database ... ");
+            ExecuteNonQuery("create table dropzone(name unique, lat, lon, note)");
+            ExecuteNonQuery("create table aircraft(type unique, tail , pic)");
+            ExecuteNonQuery("create table jump(n, ts, dz_id, ac_id, type, exit, open, note)");
+            ExecuteNonQuery("create table profile(jump_id, type, qne)");
+            ExecuteNonQuery("create table profile_point(profile_id, t, alt, lat, lon)");
+            //exec(sqlite, "create table team(name, ...)");
+            //exec(sqlite, "create table equipment(name, type)");
+            //exec(sqlite, "create table jump_equipment(jump_id, equipment_id)");
+            Console.WriteLine("done");
+        }
+
+        static XDocument LoadParalogDatabase(string paralogDatabase)
+        {
             Console.Write("Loading paralog database ...");
-            using (var fs = new FileStream(opt.ParalogDatabase, FileMode.Open))
+            using (var fs = new FileStream(paralogDatabase, FileMode.Open))
             using (var gs = new GZipStream(fs, CompressionMode.Decompress))
             {
                 var xdoc = XDocument.Load(gs);
                 Console.WriteLine("done");
-
-                var jumps = from j in xdoc.Descendants("jump")
-                                where int.Parse(j.Attribute("n").Value) >= minJumpToCopy
-                                select j;
-                using (var tr = sqlite.BeginTransaction())
-                {
-                    CopyDropzones(sqlite, tr, jumps);
-                    CopyAircraft(sqlite, tr, jumps);
-                    CopyJumps(sqlite, tr, jumps);
-                    tr.Commit();
-                }
+                return xdoc;
             }
         }
 
-        private static void CopyJumps(SQLiteConnection sqlite, SQLiteTransaction tr, IEnumerable<XElement> jumps)
+        void Run()
+        {
+            var minJumpToCopy = 1L;
+            if (!opt.Update)
+            {
+                CreateTables();
+            }
+            else
+            {
+                minJumpToCopy = (long)ExecuteScalar("select coalesce(max(n), 0)+1 from jump");
+            }
+
+            var xdoc = LoadParalogDatabase(opt.ParalogDatabase);
+            var jumps = from j in xdoc.Descendants("jump")
+                        where int.Parse(j.Attribute("n").Value) >= minJumpToCopy
+                        select j;
+            using (var tr = sqlite.BeginTransaction())
+            {
+                CopyDropzones(tr, jumps);
+                CopyAircraft(tr, jumps);
+                CopyJumps(tr, jumps);
+                tr.Commit();
+            }
+        }
+
+        void CopyJumps(SQLiteTransaction tr, IEnumerable<XElement> jumps)
         {
             Console.Write("Copying {0} jumps ", jumps.Count());
             int n = 0;
@@ -162,13 +186,13 @@ namespace paralog_to_sqlite
                 var profile = jump.Element("profile");
                 if (profile != null)
                 {
-                    CopyJumpProfile(sqlite, tr, jumpId, profile);
+                    CopyJumpProfile(tr, jumpId, profile);
                 }
             }
             Console.WriteLine("done");
         }
 
-        private static void CopyJumpProfile(SQLiteConnection sqlite, SQLiteTransaction tr, long jumpId, XElement profile)
+        void CopyJumpProfile(SQLiteTransaction tr, long jumpId, XElement profile)
         {
             using (var cmd = sqlite.CreateCommand())
             {
@@ -200,7 +224,7 @@ namespace paralog_to_sqlite
             }
         }
 
-        private static void CopyAircraft(SQLiteConnection sqlite, SQLiteTransaction tr, IEnumerable<XElement> jumps)
+        void CopyAircraft(SQLiteTransaction tr, IEnumerable<XElement> jumps)
         {
             Console.Write("Copying aircraft ...");
             var acs =
@@ -227,7 +251,7 @@ namespace paralog_to_sqlite
             Console.WriteLine("done");
         }
 
-        private static void CopyDropzones(SQLiteConnection sqlite, SQLiteTransaction tr, IEnumerable<XElement> jumps)
+        void CopyDropzones(SQLiteTransaction tr, IEnumerable<XElement> jumps)
         {
             Console.Write("Copying dropzones ... ");
             var dzs =
