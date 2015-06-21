@@ -15,11 +15,14 @@ namespace paralog_to_sqlite
 {
     class Options
     {
-        [Option("paralog-database", DefaultValue = "paralog.pmz", Required = false, HelpText = "Paralog database file")]
+        [Option('i', "paralog-database", DefaultValue = "paralog.pmz", Required = false, HelpText = "Paralog database file")]
         public string ParalogDatabase { get; set; }
 
-        [Option("sqlite-database", DefaultValue = "sqlite.db", Required = false, HelpText = "SQLite3 database file")]
+        [Option('o', "sqlite-database", DefaultValue = "sqlite.db", Required = false, HelpText = "SQLite3 database file")]
         public string SqliteDatabase { get; set; }
+
+        [Option('f', "force-overwrite", DefaultValue = false, Required = false, HelpText = "Force overwriting of sqlite database")]
+        public bool ForceOverwrite { get; set; }
 
         [HelpOption]
         public string GetUsage()
@@ -46,17 +49,23 @@ namespace paralog_to_sqlite
                 return;
             }
 
-            if (File.Exists(opt.SqliteDatabase))
-            {
-                Console.WriteLine("Sqlite database {0} already exists.", opt.SqliteDatabase);
-                return;
-            }
-
             if (!File.Exists(opt.ParalogDatabase))
             {
                 Console.WriteLine("Paralog database {0} does not exist.", opt.ParalogDatabase);
                 return;
             }
+
+            if (opt.ForceOverwrite)
+            {
+                File.Delete(opt.SqliteDatabase + ".bak");
+                File.Move(opt.SqliteDatabase, opt.SqliteDatabase + ".bak");
+            }
+            else if (File.Exists(opt.SqliteDatabase))
+            {
+                Console.WriteLine("Sqlite database {0} already exists.", opt.SqliteDatabase);
+                return;
+            }
+
             Console.Write("Creating sqlite database ... ");
             var sqlite = new SQLiteConnection("Data Source=" + opt.SqliteDatabase);
             sqlite.Open();
