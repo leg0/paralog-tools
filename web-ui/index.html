@@ -13,16 +13,6 @@
 
     <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
     <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-
-    <style>
-        .bar { 
-            display: block;
-            height: 5px;
-            width: 1px;
-            background-color: #aaf;
-            margin-bottom: 4px;
-        }
-    </style>
 </head>
 <body>
     <div class="navbar navbar-inverse navbar-fixed-top" >
@@ -111,7 +101,6 @@
     <div class="container invisible" data-bind="with: statsTab, css: { invisible: !statsTab }">
         <div class="row">
             <div class="logbook2 col-lg-3">
-                <!--<h3>Statistics</h3>-->
                 <!-- ko if: basicStats -->
                     <span data-bind="text: basicStats().jumpsTotal"></span> jumps total.<br />
                     <a href="#" data-bind="text: basicStats().jumpsLastYear"></a> jumps in last 12 months.<br />
@@ -140,7 +129,7 @@
                 <div class="bar" data-bind="style: { width : count + 'px'}"></div>
                 <!-- /ko -->
             </div>
-			<div class="logbook2 col-lg-5" data-bind="visible: groupedByType, click: function() { console.log(groupedByType()) }">
+			<div class="logbook2 col-lg-5" data-bind="visible: groupedByType">
 				<!-- ko foreach: groupedByType -->
 				<a href="#" data-bind="text: type"></a>
 				<span data-bind="text: count"></span> jumps<br />

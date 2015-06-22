@@ -14,3 +14,10 @@ body {
 .invisible {
     display: none;
 }
+.bar { 
+	display: block;
+	height: 5px;
+	width: 1px;
+	background-color: #aaf;
+	margin-bottom: 4px;
+}
