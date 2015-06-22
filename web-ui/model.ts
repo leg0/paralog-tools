@@ -261,11 +261,18 @@ class BasicStatsModel {
     }
 }
 
+class TypeGroup
+{
+	type: string;
+	count: number;
+}
+
 class StatisticsTabViewModel implements ViewModel
 {
     basicStats: KnockoutObservable<BasicStatsModel> = ko.observable(null)
     groupedByDz: KnockoutObservableArray<any> = ko.observableArray(null)
     groupedByAc: KnockoutObservableArray<any> = ko.observableArray(null)
+    groupedByType: KnockoutObservableArray<TypeGroup> = ko.observableArray([])
 
     constructor()
     {
@@ -298,26 +305,34 @@ class StatisticsTabViewModel implements ViewModel
         })
     }
 
-    getGroupedByType(fn?: Function) {
-        // TODO: actual implementation
+    getGroupedByTypeAsync(fn?: Function) {
+		$.getJSON("./x/group-by-type", (data) => {
+			if (data && data.by_type) {
+				this.groupedByType(data.by_type)
+				if (fn) { fn() }
+			}
+		})
     }
 
     showAcGroup() {
         this.getGroupedByAcAsync(() => {
             this.groupedByDz(null);
+            this.groupedByType(null);
         });
     }
 
     showDzGroup() {
         this.getGroupedByDzAsync(() => {
             this.groupedByAc(null);
+            this.groupedByType(null);
         });
     }
 
     showTypeGroup() {
-        // TODO: actual implementation
-        this.groupedByAc(null)
-        this.groupedByDz(null)
+		this.getGroupedByTypeAsync(() => {
+			this.groupedByAc(null)
+			this.groupedByDz(null)
+		});
     }
 }
 
@@ -328,7 +343,7 @@ class UploadTabViewModel implements ViewModel
 class AppViewModel implements ViewModel
 {
     title: string = "lego's skydiving logbook";
-    activeTab: KnockoutObservable<string> = ko.observable('jumps');
+    activeTab: KnockoutObservable<string> = ko.observable('');
 
     tabs: ViewModel[] = [];
 

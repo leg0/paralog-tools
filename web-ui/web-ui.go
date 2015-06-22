@@ -135,7 +135,7 @@ func groupJumpsByAircraft()([]byte, error) {
 			left outer join aircraft a on j.ac_id=a.rowid
 		group by j.ac_id
 		order by ac`
-	
+
 	g := make([]AcGroup, 0)
 	for s, err := sqliteConn.Query(sql); err == nil; err = s.Next() {
 		dg := AcGroup {}
@@ -143,6 +143,30 @@ func groupJumpsByAircraft()([]byte, error) {
 		g = append(g, dg)
 	}
 	return json.Marshal(AllAc { g })
+}
+
+func groupJumpsByType()([]byte, error) {
+	type TypeGroup struct {
+		Type string `json:"type"`
+		Count int `json:"count"`
+	}
+
+	type AllTypes struct {
+		X []TypeGroup `json:"by_type"`
+	}
+
+	sql := `
+		select type, count(*)
+		from jump
+		group by type
+		order by type`
+	g := make([]TypeGroup, 0)
+	for s, err := sqliteConn.Query(sql); err == nil; err = s.Next() {
+		tg := TypeGroup {}
+		s.Scan(&tg.Type, &tg.Count)
+		g = append(g, tg)
+	}
+	return json.Marshal(AllTypes{g})
 }
 
 // Execute a query that returns a single row with one value.
@@ -267,6 +291,7 @@ func main() {
 		mux.HandleFunc("/x/group-by-year", makeGzipHandler(yearsHandler))
 		mux.HandleFunc("/x/group-by-dropzone", makeGzipHandler(makeHandler(groupJumpsByDropzone)))
 		mux.HandleFunc("/x/group-by-aircraft", makeGzipHandler(makeHandler(groupJumpsByAircraft)))
+		mux.HandleFunc("/x/group-by-type", makeGzipHandler(makeHandler(groupJumpsByType)))
 		mux.HandleFunc("/x/jump", makeGzipHandler(jumpHandler))
 		http.ListenAndServe("localhost:8080", mux)
 	} else {

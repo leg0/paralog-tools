@@ -140,6 +140,13 @@
                 <div class="bar" data-bind="style: { width : count + 'px'}"></div>
                 <!-- /ko -->
             </div>
+			<div class="logbook2 col-lg-5" data-bind="visible: groupedByType, click: function() { console.log(groupedByType()) }">
+				<!-- ko foreach: groupedByType -->
+				<a href="#" data-bind="text: type"></a>
+				<span data-bind="text: count"></span> jumps<br />
+				<div class="bar" data-bind="style: { width: count + 'px'}"></div>
+				<!-- /ko -->
+			</div>
         </div>
     </div>
 
