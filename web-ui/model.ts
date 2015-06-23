@@ -72,11 +72,13 @@ class MonthModel
         this.num = parseInt(m.num)
         this.name = MonthModel.monthNumberToName(this.num)
         this.count = m.count
-        this.min = m.min
-        this.max = m.max
+        this.min = m.min;
+        this.max = m.max;
     }
 
-    static monthNumberToName(n: number): string
+    range(): number[] { return range(this.min, this.max); }
+
+    private static monthNumberToName(n: number): string
     {
         var names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
         return names[n - 1]
@@ -469,3 +471,13 @@ function initSammy(self: AppViewModel)
     }).run();
 }
 
+// TODO: make it a generator. and make knockout's foreach wotk with generators.
+function range(lo: number, hi: number): number[]
+{
+    var res = []
+    for (var i = lo; i <= hi; ++i)
+    {
+        res.push(i)
+    }
+    return res
+}

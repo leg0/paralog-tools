@@ -52,19 +52,8 @@
                             attr: { href: '#/jumps/date/' + $data.year + '/' + $data.num }
                             "></a>: <span data-bind="text: count"></span> jumps
                     <div class="bar" data-bind="style: {width: (count*2) + 'px'}"></div>
-                    <script>
-                        function range(lo, hi)
-                        {
-                            var res = []
-                            for (var i = lo; i <= hi; ++i)
-                            {
-                                res.push(i)
-                            }
-                            return res
-                        }
-                    </script>
                     <div data-bind="visible: $root.jumpsTab().selectedMonth() === $data">
-                        <!-- ko foreach: range(min, max) -->
+                        <!-- ko foreach: range() -->
                             <a
                                 data-bind="
                                     text: $data,
