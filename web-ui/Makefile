@@ -24,17 +24,17 @@ JS_MINIFY := minify
 .PHONY: all
 all: static-package.tar.bz2 web-ui
 
-model.js: Scripts/typings model.ts
+model.js: $(TYPINGS) Scripts/typings model.ts
 	tsc model.ts
 
-%.d.ts: Scripts
+%.d.ts:
 	tsd install $*
 
 Scripts:
 	mkdir Scripts
 
-Scripts/typings: Scripts $(TYPINGS)
-	ln -s ../typings Scripts/typings
+Scripts/typings: Scripts
+	if [ ! -e Scripts/typings ]; then ln -s $(PWD)/typings Scripts/typings; fi
 
 %.min.js.gz: %.js
 	$(JS_MINIFY) $<
