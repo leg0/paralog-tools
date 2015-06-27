@@ -96,7 +96,8 @@
                     <a href="#" data-bind="text: basicStats().jumpsLast3months"></a> jumps in last 3 months.<br />
                     Jumped at <a href="#/stats/dz" data-bind="text: basicStats().dropzones"></a> different dropzones.<br />
                     Jumped from <a href="#/stats/ac" data-bind="text: basicStats().aircraft"></a> different aircraft.<br />
-                    <a href="#/stats/type">Types of jumps</a>.
+                    <a href="#/stats/type">Types of jumps</a><br />
+                    <a href="#/stats/delay">Delays</a><br />
                 <!--/ko -->
                 <!-- ko ifnot: basicStats -->
                 <img src="img/busy.gif" alt="data is not loaded" />
@@ -125,6 +126,15 @@
 				<div class="bar" data-bind="style: { width: count + 'px'}"></div>
 				<!-- /ko -->
 			</div>
+            <div class="logbook2 col-lg-5" data-bind="visible: groupedByDelay">
+                <!-- ko foreach: groupedByDelay -->
+                <div style="font-size: x-small">
+                <span data-bind="text: delay" style="width: 3em; display: inline-block; font-size: x-small; text-align: right"></span>
+                <span class="bar2" data-bind="style: {width: count + 'px'}"></span>
+                <span data-bind="text: count" style="font-size: x-small"></span> jumps<br />
+                </div>
+                <!-- /ko -->
+            </div>
         </div>
     </div>
 

@@ -21,3 +21,10 @@ body {
 	background-color: #aaf;
 	margin-bottom: 4px;
 }
+.bar2 {
+    display: inline-block;
+    height: 5px;
+    width: 1px;
+    background-color: #aaf;
+    margin: 0px;
+}

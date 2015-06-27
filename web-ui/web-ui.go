@@ -169,6 +169,30 @@ func groupJumpsByType()([]byte, error) {
 	return json.Marshal(AllTypes{g})
 }
 
+func groupJumpsByDelay()([]byte, error) {
+    bucketSize := 5 // TODO: make parameter
+    sql := `
+        select coalesce(delay - delay % @bucketSize, 0) delay_range, count(*)
+        from jump
+        group by delay_range
+        order by delay_range`
+    type DelayGroup struct {
+        Delay int `json:"delay"`
+        Count int `json:"count"`
+    }
+    type AllDelays struct {
+        BucketSize int `json:"bucketSize"`
+        Delays []DelayGroup `json:delays"`
+    }
+    g := make([]DelayGroup, 0)
+    for s, err := sqliteConn.Query(sql, bucketSize); err == nil; err = s.Next() {
+        dg := DelayGroup {}
+        s.Scan(&dg.Delay, &dg.Count)
+        g = append(g, dg)
+    }
+    return json.Marshal(AllDelays{ bucketSize, g })
+}
+
 // Execute a query that returns a single row with one value.
 func queryValue(c *sqlite3.Conn, sql string) (int, error) {
 	if s, err := c.Query(sql); err == nil {
@@ -292,6 +316,7 @@ func main() {
 		mux.HandleFunc("/x/group-by-dropzone", makeGzipHandler(makeHandler(groupJumpsByDropzone)))
 		mux.HandleFunc("/x/group-by-aircraft", makeGzipHandler(makeHandler(groupJumpsByAircraft)))
 		mux.HandleFunc("/x/group-by-type", makeGzipHandler(makeHandler(groupJumpsByType)))
+        mux.HandleFunc("/x/group-by-delay", makeHandler(groupJumpsByDelay))
 		mux.HandleFunc("/x/jump", makeGzipHandler(jumpHandler))
 		http.ListenAndServe("localhost:8080", mux)
 	} else {

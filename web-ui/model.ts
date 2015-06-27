@@ -269,19 +269,26 @@ class TypeGroup
 	count: number;
 }
 
+class DelayGroup
+{
+    delay: number;
+    count: number;
+}
+
 class StatisticsTabViewModel implements ViewModel
 {
     basicStats: KnockoutObservable<BasicStatsModel> = ko.observable(null)
     groupedByDz: KnockoutObservableArray<any> = ko.observableArray(null)
     groupedByAc: KnockoutObservableArray<any> = ko.observableArray(null)
     groupedByType: KnockoutObservableArray<TypeGroup> = ko.observableArray([])
+    groupedByDelay: KnockoutObservableArray<DelayGroup> = ko.observableArray([])
 
     constructor()
     {
         this.getBasicStatsAsync()
     }
 
-    getBasicStatsAsync() {
+    private getBasicStatsAsync() {
         $.getJSON("./x/stats", (data) => {
             if (data && data.stats) {
                 this.basicStats(new BasicStatsModel(data.stats))
@@ -289,7 +296,7 @@ class StatisticsTabViewModel implements ViewModel
         })
     }
 
-    getGroupedByDzAsync(fn? : Function) {
+    private getGroupedByDzAsync(fn? : Function) {
         $.getJSON("./x/group-by-dropzone", (data) => {
             if (data && data.by_dz) {
                 this.groupedByDz(data.by_dz)
@@ -298,7 +305,7 @@ class StatisticsTabViewModel implements ViewModel
         })
     }
 
-    getGroupedByAcAsync(fn? : Function) {
+    private getGroupedByAcAsync(fn? : Function) {
         $.getJSON("./x/group-by-aircraft", (data) => {
             if (data && data.by_ac) {
                 this.groupedByAc(data.by_ac)
@@ -307,7 +314,7 @@ class StatisticsTabViewModel implements ViewModel
         })
     }
 
-    getGroupedByTypeAsync(fn?: Function) {
+    private getGroupedByTypeAsync(fn?: Function) {
 		$.getJSON("./x/group-by-type", (data) => {
 			if (data && data.by_type) {
 				this.groupedByType(data.by_type)
@@ -316,10 +323,20 @@ class StatisticsTabViewModel implements ViewModel
 		})
     }
 
+    private getGroupedByDelayAsync(fn?: Function) {
+        $.getJSON("./x/group-by-delay", (data) => {
+            if (data && data.Delays) {
+                this.groupedByDelay(data.Delays)
+                if (fn) { fn() }
+            }
+        })
+    }
+
     showAcGroup() {
         this.getGroupedByAcAsync(() => {
             this.groupedByDz(null);
             this.groupedByType(null);
+            this.groupedByDelay(null)
         });
     }
 
@@ -327,6 +344,7 @@ class StatisticsTabViewModel implements ViewModel
         this.getGroupedByDzAsync(() => {
             this.groupedByAc(null);
             this.groupedByType(null);
+            this.groupedByDelay(null)
         });
     }
 
@@ -334,7 +352,16 @@ class StatisticsTabViewModel implements ViewModel
 		this.getGroupedByTypeAsync(() => {
 			this.groupedByAc(null)
 			this.groupedByDz(null)
+            this.groupedByDelay(null)
 		});
+    }
+
+    showDelayGroup() {
+        this.getGroupedByDelayAsync(() => {
+            this.groupedByAc(null)
+            this.groupedByDz(null)
+            this.groupedByType(null)
+        });
     }
 }
 
@@ -449,6 +476,10 @@ function initSammy(self: AppViewModel)
         this.get("#/stats/ac", function () {
             self.selectTab('stats')
             self.statsTab().showAcGroup()
+        })
+        this.get("#/stats/delay", function() {
+            self.selectTab('stats');
+            self.statsTab().showDelayGroup();
         })
         this.get("#/stats/dz", function () {
             self.selectTab('stats');
