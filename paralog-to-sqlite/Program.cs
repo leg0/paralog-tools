@@ -102,7 +102,7 @@ namespace paralog_to_sqlite
             Console.Write("Creating sqlite database ... ");
             ExecuteNonQuery("create table dropzone(name unique, lat, lon, note)");
             ExecuteNonQuery("create table aircraft(type unique, tail , pic)");
-            ExecuteNonQuery("create table jump(n, ts, dz_id, ac_id, type, exit, open, note)");
+            ExecuteNonQuery("create table jump(n, ts, dz_id, ac_id, type, exit, open, delay, vmax, vavg, note)");
             ExecuteNonQuery("create table profile(jump_id, type, qne)");
             ExecuteNonQuery("create table profile_point(profile_id, t, alt, lat, lon)");
             //exec(sqlite, "create table team(name, ...)");
@@ -148,6 +148,37 @@ namespace paralog_to_sqlite
             }
         }
 
+        static void AddWithIntValue(SQLiteParameterCollection p, string paramName, XAttribute el)
+        {
+            if (el == null)
+                p.AddWithValue(paramName, null);
+            else
+                p.AddWithValue(paramName, int.Parse(el.Value));
+        }
+
+        static void AddWithIntValue(SQLiteParameterCollection p, string paramName, XElement el)
+        {
+            if (el == null)
+                p.AddWithValue(paramName, null);
+            else
+                p.AddWithValue(paramName, int.Parse(el.Value));
+        }
+
+        static CultureInfo en_us = new CultureInfo("en-US");
+
+        static void AddWithDoubleValue(SQLiteParameterCollection p, string paramName, XElement el)
+        {
+            if (el == null)
+                p.AddWithValue(paramName, null);
+            else
+                p.AddWithValue(paramName, double.Parse(el.Value, en_us));
+        }
+
+        static void AddWithStringValue(SQLiteParameterCollection p, string paramName, XElement el)
+        {
+            p.AddWithValue(paramName, el == null ? null : el.Value);
+        }
+
         void CopyJumps(SQLiteTransaction tr, IEnumerable<XElement> jumps)
         {
             Console.Write("Copying {0} jumps ", jumps.Count());
@@ -164,22 +195,22 @@ namespace paralog_to_sqlite
                         "insert into jump values(@n, @ts, " +
                             "(select rowid from dropzone where name=@dz), " +
                             "(select rowid from aircraft where type=@ac), " +
-                            "@type, @exit, @open, @note)";
+                            "@type, @exit, @open, @delay, @vmax, @vavg, @note)";
                     cmd.Prepare();
                     var p = cmd.Parameters;
-                    p.AddWithValue("@n", int.Parse(jump.Attribute("n").Value));
+                    AddWithIntValue(p, "@n", jump.Attribute("n"));
                     var ts = jump.Attribute("ts").Value;
                     if (!ts.EndsWith("Z")) ts += ":00";
                     p.AddWithValue("@ts", ts);
-                    var dz = jump.Element("dz");
-                    p.AddWithValue("@dz", dz != null ? dz.Value : null);
-                    p.AddWithValue("@ac", jump.Element("ac").Value);
-                    var type = jump.Element("type");
-                    p.AddWithValue("@type", type != null ? type.Value : null);
-                    p.AddWithValue("@exit", int.Parse(jump.Element("exit").Value));
-                    p.AddWithValue("@open", int.Parse(jump.Element("open").Value));
-                    var note = jump.Element("note");
-                    p.AddWithValue("@note", note != null ? note.Value : null);
+                    AddWithStringValue(p, "@dz", jump.Element("dz"));
+                    AddWithStringValue(p, "@ac", jump.Element("ac"));
+                    AddWithStringValue(p, "@type", jump.Element("type"));
+                    AddWithIntValue(p, "@exit", jump.Element("exit"));
+                    AddWithIntValue(p, "@open", jump.Element("open"));
+                    AddWithIntValue(p, "@delay", jump.Element("ffTime"));
+                    AddWithDoubleValue(p, "@vmax", jump.Element("vMax"));
+                    AddWithDoubleValue(p, "@vavg", jump.Element("vAvg"));
+                    AddWithStringValue(p, "@note", jump.Element("note"));
                     cmd.ExecuteNonQuery();
                 }
                 var jumpId = sqlite.LastInsertRowId;
