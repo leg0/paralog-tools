@@ -98,6 +98,13 @@
                     Jumped from <a href="#/stats/ac" data-bind="text: basicStats().aircraft"></a> different aircraft.<br />
                     <a href="#/stats/type">Types of jumps</a><br />
                     <a href="#/stats/delay">Delays</a><br />
+                    <a href="#/stats/exit">Exits</a><br />
+                    <a href="#/stats/open">Openings</a><br />
+                    <!-- TODO: exit vs. delay -->
+                    <!-- TODO: exit vs. open -->
+                    <!-- TODO: delay vs. type -->
+                    <!-- TODO: exit vs. ac -->
+                    <!-- TODO: dz vs. ac -->
                 <!--/ko -->
                 <!-- ko ifnot: basicStats -->
                 <img src="img/busy.gif" alt="data is not loaded" />
@@ -130,6 +137,15 @@
                 <!-- ko foreach: groupedByDelay -->
                 <div style="font-size: x-small">
                 <span data-bind="text: delay" style="width: 3em; display: inline-block; font-size: x-small; text-align: right"></span>
+                <span class="bar2" data-bind="style: {width: count + 'px'}"></span>
+                <span data-bind="text: count" style="font-size: x-small"></span> jumps<br />
+                </div>
+                <!-- /ko -->
+            </div>
+            <div class="logbook2 col-lg-5" data-bind="visible: groupedByExit">
+                <!-- ko foreach: groupedByExit -->
+                <div style="font-size: x-small">
+                <span data-bind="text: exit" style="width: 3em; display: inline-block; font-size: x-small; text-align: right"></span>
                 <span class="bar2" data-bind="style: {width: count + 'px'}"></span>
                 <span data-bind="text: count" style="font-size: x-small"></span> jumps<br />
                 </div>

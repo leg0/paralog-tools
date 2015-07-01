@@ -275,6 +275,12 @@ class DelayGroup
     count: number;
 }
 
+class ExitGroup
+{
+    exit: number;
+    count: number;
+}
+
 class StatisticsTabViewModel implements ViewModel
 {
     basicStats: KnockoutObservable<BasicStatsModel> = ko.observable(null)
@@ -282,6 +288,7 @@ class StatisticsTabViewModel implements ViewModel
     groupedByAc: KnockoutObservableArray<any> = ko.observableArray(null)
     groupedByType: KnockoutObservableArray<TypeGroup> = ko.observableArray([])
     groupedByDelay: KnockoutObservableArray<DelayGroup> = ko.observableArray([])
+    groupedByExit: KnockoutObservableArray<ExitGroup> = ko.observableArray([])
 
     constructor()
     {
@@ -299,7 +306,7 @@ class StatisticsTabViewModel implements ViewModel
     private getGroupedByDzAsync(fn? : Function) {
         $.getJSON("./x/group-by-dropzone", (data) => {
             if (data && data.by_dz) {
-                this.groupedByDz(data.by_dz)
+                this.selectStats("dz", data.by_dz);
                 if (fn) { fn() }
             }
         })
@@ -308,7 +315,7 @@ class StatisticsTabViewModel implements ViewModel
     private getGroupedByAcAsync(fn? : Function) {
         $.getJSON("./x/group-by-aircraft", (data) => {
             if (data && data.by_ac) {
-                this.groupedByAc(data.by_ac)
+                this.selectStats("ac", data.by_ac);
                 if (fn) { fn() }
             }
         })
@@ -317,7 +324,7 @@ class StatisticsTabViewModel implements ViewModel
     private getGroupedByTypeAsync(fn?: Function) {
 		$.getJSON("./x/group-by-type", (data) => {
 			if (data && data.by_type) {
-				this.groupedByType(data.by_type)
+                this.selectStats("type", data.by_type);
 				if (fn) { fn() }
 			}
 		})
@@ -326,43 +333,38 @@ class StatisticsTabViewModel implements ViewModel
     private getGroupedByDelayAsync(fn?: Function) {
         $.getJSON("./x/group-by-delay", (data) => {
             if (data && data.Delays) {
-                this.groupedByDelay(data.Delays)
+                this.selectStats("delay", data.Delays);
                 if (fn) { fn() }
             }
         })
     }
 
-    showAcGroup() {
-        this.getGroupedByAcAsync(() => {
-            this.groupedByDz(null);
-            this.groupedByType(null);
-            this.groupedByDelay(null)
+    private getGroupedByExitAsync(fn?: Function) {
+        $.getJSON("./x/group-by-exit", (data) => {
+            if (data && data.Exits) {
+                this.selectStats("exit", data.Exits);
+                if (fn) { fn(); }
+            }
         });
     }
 
-    showDzGroup() {
-        this.getGroupedByDzAsync(() => {
-            this.groupedByAc(null);
-            this.groupedByType(null);
-            this.groupedByDelay(null)
-        });
+    private selectStats(statsName: string, data: any) {
+        if (statsName != "dz")    { this.groupedByDz(null);    } else { this.groupedByDz(data); }
+        if (statsName != "ac")    { this.groupedByAc(null);    } else { this.groupedByAc(data); }
+        if (statsName != "type")  { this.groupedByType(null);  } else { this.groupedByType(data); }
+        if (statsName != "delay") { this.groupedByDelay(null); } else { this.groupedByDelay(data); }
+        if (statsName != "exit")  { this.groupedByExit(null);  } else { this.groupedByExit(data); }
     }
 
-    showTypeGroup() {
-		this.getGroupedByTypeAsync(() => {
-			this.groupedByAc(null)
-			this.groupedByDz(null)
-            this.groupedByDelay(null)
-		});
-    }
+    showAcGroup() { this.getGroupedByAcAsync(); }
 
-    showDelayGroup() {
-        this.getGroupedByDelayAsync(() => {
-            this.groupedByAc(null)
-            this.groupedByDz(null)
-            this.groupedByType(null)
-        });
-    }
+    showDzGroup() { this.getGroupedByDzAsync(); }
+
+    showTypeGroup() { this.getGroupedByTypeAsync(); }
+
+    showDelayGroup() { this.getGroupedByDelayAsync(); }
+
+    showExitGroup() { this.getGroupedByExitAsync(); }
 }
 
 class UploadTabViewModel implements ViewModel
@@ -484,6 +486,10 @@ function initSammy(self: AppViewModel)
         this.get("#/stats/dz", function () {
             self.selectTab('stats');
             self.statsTab().showDzGroup();
+        })
+        this.get("#/stats/exit", function() {
+            self.selectTab('stats');
+            self.statsTab().showExitGroup();
         })
         this.get("#/stats/type", function () {
             self.selectTab('stats');
