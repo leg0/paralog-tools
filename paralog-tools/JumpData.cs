@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Xml;
 
-namespace Paralog_gps
+namespace Paralog_tools
 {
     public class JumpData
     {

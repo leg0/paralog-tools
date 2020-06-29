@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Globalization;
 
-namespace Paralog_gps.Nmea
+namespace Paralog_tools.Nmea
 {
     public class GeographicPosition
     {

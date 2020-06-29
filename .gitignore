@@ -1,8 +1,11 @@
+*.bak
+*.sdf
 *.suo
 *.user
 *.pdb
 *.dll
 *.exe
+Thumbs.db
 Debug/
 Release/
 packages/

@@ -2,7 +2,7 @@
 using System.Globalization;
 using System.IO;
 
-namespace Paralog_gps
+namespace Paralog_tools
 {
     class NmeaFileParser : IEnumerable<Waypoint>
     {

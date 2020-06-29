@@ -2,7 +2,7 @@
 using System.IO.Compression;
 using System.Xml;
 
-namespace Paralog_gps
+namespace Paralog_tools
 {
     public class Logbook
     {

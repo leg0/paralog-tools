@@ -1,5 +1,5 @@
 ﻿
-namespace Paralog_gps
+namespace Paralog_tools
 {
     class Waypoint
     {

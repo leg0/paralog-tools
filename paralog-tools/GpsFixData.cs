@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Paralog_gps.Nmea
+namespace Paralog_tools.Nmea
 {
 /**
  * An object of this class represents a GPGGA sentence.

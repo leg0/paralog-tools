@@ -2,6 +2,7 @@
 using CommandLine.Text;
 using System;
 using System.IO;
+using Paralog_tools;
 
 namespace Paralog_gps
 {
