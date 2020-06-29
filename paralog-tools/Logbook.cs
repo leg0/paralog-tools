@@ -17,6 +17,7 @@ namespace Paralog_tools
             GZipStream gs = new GZipStream(fs, CompressionMode.Decompress);
             XmlTextReader reader = new XmlTextReader(gs);
             XmlDocument doc = new XmlDocument();
+            doc.PreserveWhitespace = false;
             doc.Load(reader);
             reader.Close();
             gs.Close();
@@ -27,12 +28,16 @@ namespace Paralog_tools
 
         public void SaveFile(string filename)
         {
-            FileStream fs = new FileStream(filename, FileMode.Truncate);
+            FileStream fs = new FileStream(filename, FileMode.Create, FileAccess.Write);
             GZipStream gs = new GZipStream(fs, CompressionMode.Compress, false);
+            doc_.PreserveWhitespace = true;
             doc_.Save(gs);
             gs.Close();
             fs.Close();
         }
+
+        //public XmlNodeList Jumps => doc_.SelectNodes("/pml/log/jump");
+        public XmlNodeList SelectNodes(string xpath) => doc_.SelectNodes(xpath);
 
         public JumpData FindJump(int jumpNumber)
         {
